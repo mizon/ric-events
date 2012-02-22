@@ -11,7 +11,8 @@ Executable ric-events.cgi
   Extensions: DoAndIfThenElse, FlexibleInstances
   Build-Depends:
     base == 4.*, mtl == 2.*, containers == 0.4.*,
-    parsec == 3.1.*, aeson >= 0.6
+    parsec == 3.1.*, aeson >= 0.6, filepath >= 1.2,
+    bytestring >= 0.9, attoparsec >= 0.9, text >= 0.11
 
 Test-Suite test
   Type: exitcode-stdio-1.0
@@ -20,4 +21,6 @@ Test-Suite test
   Extensions: DoAndIfThenElse, StandaloneDeriving, FlexibleInstances
   Build-Depends:
     base == 4.*, mtl == 2.*, containers == 0.4.*,
-    parsec == 3.1.*, HUnit == 1.2.*, aeson >= 0.6
+    parsec == 3.1.*, HUnit == 1.2.*, aeson >= 0.6, filepath >= 1.2,
+    bytestring >= 0.9, attoparsec >= 0.9, text >= 0.11,
+    directory >= 1.1
