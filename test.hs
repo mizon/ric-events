@@ -3,6 +3,7 @@
 import qualified RicEvents.Database as D
 import qualified System.Directory as Di
 import qualified Data.ByteString as BS
+import qualified Data.Vector as V
 import Test.HUnit
 import Control.Monad
 import System.Exit
@@ -48,6 +49,17 @@ checkDB
            return (a, b)
         a1 @?= Nothing
         a2 @?= Just attendee {D.aId = Just 1}
+
+     , "all" ~: do
+        cleanUp
+        D.withDB dbPath $ do
+          D.putAttendee attendee
+          D.putAttendee attendee
+          D.putAttendee attendee
+        all <- D.withDB dbPath $ do
+          D.deleteAttendee 0
+          D.getAllAttendees
+        V.length all @?= 2
      ]
   where
     dbPath = "./hoge.json"
