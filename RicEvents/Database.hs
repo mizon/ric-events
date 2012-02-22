@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module RicEvents.Database
-  ( Attendee(..), mkAttendee, AttendeeDB(..),
-    get, put, delete, all, loadDB, saveDB
+  ( Attendee(..), mkAttendee, AttendeeDB(..)
+  , DBAction, getAttendee, putAttendee, deleteAttendee, getAllAttendees
+  , get, put, delete, all, loadDB, saveDB
   ) where
 
 import Data.Aeson ((.=), (.:), (.:?))
@@ -17,6 +18,7 @@ import qualified Data.Vector as V
 import qualified Data.Maybe as Mb
 import System.IO
 import Control.Applicative
+import qualified Control.Monad.State as S
 import qualified System.FilePath as F
 
 import Prelude hiding (all)
@@ -54,6 +56,20 @@ data AttendeeDB
     { dbAttendees :: V.Vector (Maybe Attendee)
     , dbPath :: F.FilePath
     }
+
+type DBAction = S.State AttendeeDB
+
+getAttendee :: Int -> DBAction (Maybe Attendee)
+getAttendee = S.gets . get
+
+putAttendee :: Attendee -> DBAction ()
+putAttendee = S.modify . put
+
+deleteAttendee :: Int -> DBAction ()
+deleteAttendee = S.modify . delete
+
+getAllAttendees :: DBAction (V.Vector Attendee)
+getAllAttendees = S.gets all
 
 get :: Int -> AttendeeDB -> Maybe Attendee
 get i (db@AttendeeDB {dbAttendees = as}) = id =<< (as V.!? i)
