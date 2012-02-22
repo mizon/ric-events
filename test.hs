@@ -50,7 +50,7 @@ checkDB
         a1 @?= Nothing
         a2 @?= Just attendee {D.aId = Just 1}
 
-     , "all" ~: do
+    , "all" ~: do
         cleanUp
         D.withDB dbPath $ do
           D.putAttendee attendee
@@ -60,7 +60,7 @@ checkDB
           D.deleteAttendee 0
           D.getAllAttendees
         V.length all @?= 2
-     ]
+    ]
   where
     dbPath = "./hoge.json"
 
