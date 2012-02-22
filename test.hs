@@ -1,7 +1,8 @@
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE OverloadedStrings, StandaloneDeriving #-}
 
 import qualified RicEvents.Database as D
 import qualified System.Directory as Di
+import qualified Data.ByteString as BS
 import Test.HUnit
 import Control.Monad
 import System.Exit
@@ -21,14 +22,19 @@ checkDB :: Test
 checkDB
   = TestList
     [ "check save and load" ~: do
-        cdir <- Di.getCurrentDirectory
-        putStrLn cdir
+        cleanUp
         db <- D.loadDB dbPath
         D.saveDB $ D.put attendee db
         reload <- D.loadDB dbPath
-        D.get "10" reload @?= Just attendee
+        expectAt 0 attendee reload
     ]
   where
     dbPath = "./hoge.json"
 
-    attendee = D.Attendee 10 "mizon" "ricora" "yattaneBokutin"
+    expectAt i attendee db = D.get i db @?= Just attendee {D.aId = Just i}
+
+    attendee = D.mkAttendee "mizon" "ricora" "yattaneBokutin"
+
+    cleanUp = do
+      Di.removeFile dbPath
+      BS.writeFile dbPath "[]"
