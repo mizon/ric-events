@@ -67,9 +67,9 @@ put a (db@AttendeeDB {dbAttendees = as})
   = put' (Just a {aId = Just $ V.length as}) db
 
 delete :: Int -> AttendeeDB -> AttendeeDB
-delete i db = deleteIfExist $ get i db
+delete i (db@AttendeeDB {dbAttendees = as}) = deleteIfExist $ get i db
   where
-    deleteIfExist (Just _) = put' Nothing db
+    deleteIfExist (Just _) = db {dbAttendees = as V.// [(i, Nothing)]}
     deleteIfExist Nothing  = db
 
 put' :: Maybe Attendee -> AttendeeDB -> AttendeeDB
