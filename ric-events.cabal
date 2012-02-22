@@ -7,7 +7,7 @@ Extra-Source-Files: RicEvents/*.hs
 
 Executable ric-events.cgi
   Main-Is: main.hs
-  GHC-Options: -Wall -O2 -fno-warn-unused-binds
+  GHC-Options: -Wall -O2 -fno-warn-unused-binds -fno-warn-incomplete-patterns
   Extensions: DoAndIfThenElse, FlexibleInstances
   Build-Depends:
     base == 4.*, mtl == 2.*, containers == 0.4.*,
@@ -18,7 +18,7 @@ Executable ric-events.cgi
 Test-Suite test
   Type: exitcode-stdio-1.0
   Main-Is: test.hs
-  GHC-Options: -Wall -O0
+  GHC-Options: -Wall -O0 -fno-warn-incomplete-patterns
   Extensions: DoAndIfThenElse, StandaloneDeriving, FlexibleInstances
   Build-Depends:
     base == 4.*, mtl == 2.*, containers == 0.4.*,

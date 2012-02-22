@@ -10,7 +10,6 @@ import System.Exit
 import Debug.Trace
 
 deriving instance Eq D.Attendee
-deriving instance Show D.Attendee
 
 main :: IO ()
 main = do
@@ -27,6 +26,15 @@ checkDB
         D.saveDB $ D.put attendee db
         reload <- D.loadDB dbPath
         expectAt 0 attendee reload
+
+    , "with db" ~: do
+        cleanUp
+        D.withDB dbPath $ do
+          D.putAttendee attendee
+          D.putAttendee attendee
+          D.putAttendee attendee
+        a <- D.withDB dbPath $ D.getAttendee 0
+        a @?= Just attendee {D.aId = Just 0}
     ]
   where
     dbPath = "./hoge.json"

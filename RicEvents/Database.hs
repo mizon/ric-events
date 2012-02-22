@@ -9,8 +9,6 @@ module RicEvents.Database
 import Data.Aeson ((.=), (.:), (.:?))
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
-import qualified Data.Map as M
-import qualified Data.Text as T
 import qualified Data.Attoparsec as At
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -18,7 +16,6 @@ import qualified Data.Vector as V
 import qualified Data.Maybe as Mb
 import System.IO
 import Control.Applicative
-import qualified Control.Exception as Ex
 import qualified Control.Monad.State as S
 import qualified System.FilePath as F
 
@@ -40,9 +37,9 @@ mkAttendee name circle comment
   = Attendee Nothing name circle comment
 
 instance A.ToJSON Attendee where
-  toJSON (Attendee id name circle comment)
+  toJSON (Attendee id_ name circle comment)
     = A.object
-      [ "id" .=  id
+      [ "id" .=  id_
       , "name" .= name
       , "circle" .= circle
       , "comment" .= comment
@@ -65,8 +62,8 @@ data AttendeeDB
 type DBAction = S.State AttendeeDB
 
 withDB :: F.FilePath -> DBAction a -> IO a
-withDB path a = do
-  (a, db) <- S.runState a `fmap` loadDB path
+withDB path action = do
+  (a, db) <- S.runState action `fmap` loadDB path
   saveDB db
   return a
 
@@ -83,7 +80,7 @@ getAllAttendees :: DBAction (V.Vector Attendee)
 getAllAttendees = S.gets all
 
 get :: Int -> AttendeeDB -> Maybe Attendee
-get i (db@AttendeeDB {dbAttendees = as}) = id =<< (as V.!? i)
+get i (AttendeeDB {dbAttendees = as}) = id =<< (as V.!? i)
 
 put :: Attendee -> AttendeeDB -> AttendeeDB
 put a (db@AttendeeDB {dbAttendees = as})
