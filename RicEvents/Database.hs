@@ -56,11 +56,7 @@ data AttendeeDB
     }
 
 get :: Int -> AttendeeDB -> Maybe Attendee
-get i (db@AttendeeDB {dbAttendees = as})
-  = case as V.!? i of
-      Just (Just a) -> Just a
-      Just Nothing  -> Nothing
-      Nothing       -> Nothing
+get i (db@AttendeeDB {dbAttendees = as}) = id =<< (as V.!? i)
 
 put :: Attendee -> AttendeeDB -> AttendeeDB
 put a (db@AttendeeDB {dbAttendees = as})
