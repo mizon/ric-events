@@ -2,7 +2,7 @@
 
 module RicEvents.Database
   ( Attendee(..), mkAttendee, AttendeeDB(..)
-  , DBAction, getAttendee, putAttendee, deleteAttendee, getAllAttendees
+  , DBAction, withDB, getAttendee, putAttendee, deleteAttendee, getAllAttendees
   , get, put, delete, all, loadDB, saveDB
   ) where
 
@@ -18,8 +18,11 @@ import qualified Data.Vector as V
 import qualified Data.Maybe as Mb
 import System.IO
 import Control.Applicative
+import qualified Control.Exception as Ex
 import qualified Control.Monad.State as S
 import qualified System.FilePath as F
+
+import Debug.Trace
 
 import Prelude hiding (all)
 
@@ -30,6 +33,7 @@ data Attendee
     , aCircle :: String
     , aComment :: String
     }
+  deriving Show
 
 mkAttendee :: String -> String -> String -> Attendee
 mkAttendee name circle comment
@@ -56,8 +60,15 @@ data AttendeeDB
     { dbAttendees :: V.Vector (Maybe Attendee)
     , dbPath :: F.FilePath
     }
+  deriving Show
 
 type DBAction = S.State AttendeeDB
+
+withDB :: F.FilePath -> DBAction a -> IO a
+withDB path a = do
+  (a, db) <- S.runState a `fmap` loadDB path
+  saveDB db
+  return a
 
 getAttendee :: Int -> DBAction (Maybe Attendee)
 getAttendee = S.gets . get
@@ -103,4 +114,4 @@ loadDB path = do
           Left e  -> A.Error e
 
 saveDB :: AttendeeDB -> IO ()
-saveDB db = LBS.writeFile (dbPath db) $ A.encode $ all db
+saveDB db = LBS.writeFile (dbPath db) $ A.encode $ dbAttendees $ trace ("debug:\n" ++ show db ++ "\n") db
