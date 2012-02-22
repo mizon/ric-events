@@ -14,6 +14,7 @@ import qualified Data.Attoparsec as At
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Vector as V
+import qualified Data.Maybe as Mb
 import System.IO
 import Control.Applicative
 import qualified System.FilePath as F
@@ -50,19 +51,32 @@ instance A.FromJSON Attendee where
 
 data AttendeeDB
   = AttendeeDB
-    { dbAttendees :: V.Vector Attendee
+    { dbAttendees :: V.Vector (Maybe Attendee)
     , dbPath :: F.FilePath
     }
 
 put :: Attendee -> AttendeeDB -> AttendeeDB
 put a (db@AttendeeDB {dbAttendees = as})
-  = db {dbAttendees = as `V.snoc` a {aId = Just $ V.length as}}
+  = put' (Just a {aId = Just $ V.length as}) db
+
+put' :: Maybe Attendee -> AttendeeDB -> AttendeeDB
+put' ma (db@AttendeeDB {dbAttendees = as})
+  = db {dbAttendees = as `V.snoc` ma}
 
 get :: Int -> AttendeeDB -> Maybe Attendee
-get i (db@AttendeeDB {dbAttendees = as}) = as V.!? i
+get i (db@AttendeeDB {dbAttendees = as})
+  = case as V.!? i of
+      Just (Just a) -> Just a
+      Just Nothing  -> Nothing
+      Nothing       -> Nothing
+
+-- delete :: Int -> AttendeeDB -> AttendeeDB
+-- delete i db
+--   = case get i db of
+--       Just _ =
 
 all :: AttendeeDB -> V.Vector Attendee
-all = dbAttendees
+all = V.map Mb.fromJust . V.filter Mb.isJust . dbAttendees
 
 loadDB :: F.FilePath -> IO AttendeeDB
 loadDB path = do
