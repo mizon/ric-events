@@ -2,7 +2,7 @@
 
 module RicEvents.Database
   ( Attendee(..), mkAttendee, AttendeeDB(..),
-    put, get, all, loadDB, saveDB
+    get, put, delete, all, loadDB, saveDB
   ) where
 
 import Data.Aeson ((.=), (.:), (.:?))
@@ -55,14 +55,6 @@ data AttendeeDB
     , dbPath :: F.FilePath
     }
 
-put :: Attendee -> AttendeeDB -> AttendeeDB
-put a (db@AttendeeDB {dbAttendees = as})
-  = put' (Just a {aId = Just $ V.length as}) db
-
-put' :: Maybe Attendee -> AttendeeDB -> AttendeeDB
-put' ma (db@AttendeeDB {dbAttendees = as})
-  = db {dbAttendees = as `V.snoc` ma}
-
 get :: Int -> AttendeeDB -> Maybe Attendee
 get i (db@AttendeeDB {dbAttendees = as})
   = case as V.!? i of
@@ -70,10 +62,19 @@ get i (db@AttendeeDB {dbAttendees = as})
       Just Nothing  -> Nothing
       Nothing       -> Nothing
 
--- delete :: Int -> AttendeeDB -> AttendeeDB
--- delete i db
---   = case get i db of
---       Just _ =
+put :: Attendee -> AttendeeDB -> AttendeeDB
+put a (db@AttendeeDB {dbAttendees = as})
+  = put' (Just a {aId = Just $ V.length as}) db
+
+delete :: Int -> AttendeeDB -> AttendeeDB
+delete i db = deleteIfExist $ get i db
+  where
+    deleteIfExist (Just _) = put' Nothing db
+    deleteIfExist Nothing  = db
+
+put' :: Maybe Attendee -> AttendeeDB -> AttendeeDB
+put' ma (db@AttendeeDB {dbAttendees = as})
+  = db {dbAttendees = as `V.snoc` ma}
 
 all :: AttendeeDB -> V.Vector Attendee
 all = V.map Mb.fromJust . V.filter Mb.isJust . dbAttendees
