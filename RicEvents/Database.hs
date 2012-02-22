@@ -67,7 +67,7 @@ loadDB path = do
 
     attendees c = case attendees' c of
                     A.Success v -> v
-                    _           -> undefined
+                    _           -> error "invalid json"
 
     attendees' c = case At.parseOnly A.json c of
                     Right v -> AT.parse A.parseJSON v
