@@ -64,17 +64,13 @@ get i (db@AttendeeDB {dbAttendees = as})
 
 put :: Attendee -> AttendeeDB -> AttendeeDB
 put a (db@AttendeeDB {dbAttendees = as})
-  = put' (Just a {aId = Just $ V.length as}) db
+  = db {dbAttendees = as `V.snoc` Just a {aId = Just $ V.length as}}
 
 delete :: Int -> AttendeeDB -> AttendeeDB
 delete i (db@AttendeeDB {dbAttendees = as}) = deleteIfExist $ get i db
   where
     deleteIfExist (Just _) = db {dbAttendees = as V.// [(i, Nothing)]}
     deleteIfExist Nothing  = db
-
-put' :: Maybe Attendee -> AttendeeDB -> AttendeeDB
-put' ma (db@AttendeeDB {dbAttendees = as})
-  = db {dbAttendees = as `V.snoc` ma}
 
 all :: AttendeeDB -> V.Vector Attendee
 all = V.map Mb.fromJust . V.filter Mb.isJust . dbAttendees
