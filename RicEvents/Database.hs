@@ -19,8 +19,6 @@ import Control.Applicative
 import qualified Control.Monad.State as S
 import qualified System.FilePath as F
 
-import Debug.Trace
-
 import Prelude hiding (all)
 
 data Attendee
@@ -111,4 +109,4 @@ loadDB path = do
           Left e  -> A.Error e
 
 saveDB :: AttendeeDB -> IO ()
-saveDB db = LBS.writeFile (dbPath db) $ A.encode $ dbAttendees $ trace ("debug:\n" ++ show db ++ "\n") db
+saveDB db = LBS.writeFile (dbPath db) $ A.encode $ dbAttendees db
