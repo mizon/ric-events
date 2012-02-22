@@ -8,16 +8,16 @@ Extra-Source-Files: RicEvents/*.hs
 Executable ric-events.cgi
   Main-Is: main.hs
   GHC-Options: -Wall -O2 -fno-warn-unused-binds
-  Extensions: DoAndIfThenElse
+  Extensions: DoAndIfThenElse, FlexibleInstances
   Build-Depends:
     base == 4.*, mtl == 2.*, containers == 0.4.*,
-    parsec == 3.1.*
+    parsec == 3.1.*, aeson == 0.4.*
 
 Test-Suite test
   Type: exitcode-stdio-1.0
   Main-Is: test.hs
   GHC-Options: -Wall -O0
-  Extensions: DoAndIfThenElse, StandaloneDeriving
+  Extensions: DoAndIfThenElse, StandaloneDeriving, FlexibleInstances
   Build-Depends:
     base == 4.*, mtl == 2.*, containers == 0.4.*,
-    parsec == 3.1.*, HUnit == 1.2.*
+    parsec == 3.1.*, HUnit == 1.2.*, aeson >= 0.6
