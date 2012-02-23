@@ -16,6 +16,7 @@ import qualified Data.Vector as V
 import qualified Data.Maybe as Mb
 import System.IO
 import Control.Applicative
+import Control.Monad
 import qualified Control.Monad.State as S
 import qualified System.FilePath as F
 
@@ -78,7 +79,7 @@ getAllAttendees :: DBAction (V.Vector Attendee)
 getAllAttendees = S.gets all
 
 get :: Int -> AttendeeDB -> Maybe Attendee
-get i (AttendeeDB {dbAttendees = as}) = id =<< (as V.!? i)
+get i (AttendeeDB {dbAttendees = as}) = join $ as V.!? i
 
 put :: Attendee -> AttendeeDB -> AttendeeDB
 put a (db@AttendeeDB {dbAttendees = as})
