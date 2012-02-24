@@ -15,6 +15,13 @@ Executable ric-events.cgi
     bytestring >= 0.9, attoparsec >= 0.9, text >= 0.11,
     vector >= 0.9
 
+Executable run-server
+  Main-Is: run-server.hs
+  GHC-Options: -Wall -O2
+  Extensions: DoAndIfThenElse
+  Build-Depends:
+    base >= 4.0, warp >= 1.1, wai >= 1.1, conduit >= 0.2 && < 0.3, http-types >= 0.6
+
 Test-Suite test
   Type: exitcode-stdio-1.0
   Main-Is: test.hs
