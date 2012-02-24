@@ -1,4 +1,7 @@
 test:
 	@cabal build && cabal test
 
-.PHONY: test
+server:
+	@./dist/build/run-server/run-server -p 8000
+
+.PHONY: test server
