@@ -17,50 +17,49 @@ main = do
     exitFailure
 
 checkDB :: Test
-checkDB
-  = TestList
-    [ "save and load" ~: do
-        cleanUp
-        db <- D.loadDB dbPath
-        D.saveDB $ D.put attendee db
-        reload <- D.loadDB dbPath
-        expectAt 0 attendee reload
+checkDB = TestList
+  [ "save and load" ~: do
+      cleanUp
+      db <- D.loadDB dbPath
+      D.saveDB $ D.put attendee db
+      reload <- D.loadDB dbPath
+      expectAt 0 attendee reload
 
-    , "put attendee" ~: do
-        cleanUp
-        D.withDB dbPath $ do
-          D.putAttendee attendee
-          D.putAttendee attendee
-          D.putAttendee attendee
-        as <- D.withDB dbPath $ sequence $ map D.getAttendee [0..2]
-        forM_ [0..2] $ \i -> do
-          as !! i @?= Just attendee {D.aId = Just i}
+  , "put attendee" ~: do
+      cleanUp
+      D.withDB dbPath $ do
+        D.putAttendee attendee
+        D.putAttendee attendee
+        D.putAttendee attendee
+      as <- D.withDB dbPath $ sequence $ map D.getAttendee [0..2]
+      forM_ [0..2] $ \i -> do
+        as !! i @?= Just attendee {D.aId = Just i}
 
-    , "delete attendee" ~: do
-        cleanUp
-        D.withDB dbPath $ do
-          D.putAttendee attendee
-          D.putAttendee attendee
-        D.withDB dbPath $ do
-          D.deleteAttendee 0
-        (a1, a2) <- D.withDB dbPath $ do
-           a <- D.getAttendee 0
-           b <- D.getAttendee 1
-           return (a, b)
-        a1 @?= Nothing
-        a2 @?= Just attendee {D.aId = Just 1}
+  , "delete attendee" ~: do
+      cleanUp
+      D.withDB dbPath $ do
+        D.putAttendee attendee
+        D.putAttendee attendee
+      D.withDB dbPath $ do
+        D.deleteAttendee 0
+      (a1, a2) <- D.withDB dbPath $ do
+        a <- D.getAttendee 0
+        b <- D.getAttendee 1
+        return (a, b)
+      a1 @?= Nothing
+      a2 @?= Just attendee {D.aId = Just 1}
 
-    , "all" ~: do
-        cleanUp
-        D.withDB dbPath $ do
-          D.putAttendee attendee
-          D.putAttendee attendee
-          D.putAttendee attendee
-        all <- D.withDB dbPath $ do
-          D.deleteAttendee 0
-          D.getAllAttendees
-        V.length all @?= 2
-    ]
+  , "all" ~: do
+      cleanUp
+      D.withDB dbPath $ do
+        D.putAttendee attendee
+        D.putAttendee attendee
+        D.putAttendee attendee
+      all <- D.withDB dbPath $ do
+        D.deleteAttendee 0
+        D.getAllAttendees
+      V.length all @?= 2
+  ]
   where
     dbPath = "./hoge.json"
 

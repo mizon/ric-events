@@ -36,13 +36,12 @@ mkAttendee name circle comment
   = Attendee Nothing name circle comment
 
 instance A.ToJSON Attendee where
-  toJSON (Attendee id_ name circle comment)
-    = A.object
-      [ "id" .=  id_
-      , "name" .= name
-      , "circle" .= circle
-      , "comment" .= comment
-      ]
+  toJSON (Attendee id_ name circle comment) = A.object
+    [ "id" .=  id_
+    , "name" .= name
+    , "circle" .= circle
+    , "comment" .= comment
+    ]
 
 instance A.FromJSON Attendee where
   parseJSON (A.Object o)
@@ -51,11 +50,10 @@ instance A.FromJSON Attendee where
                <*> o .: "circle"
                <*> o .: "comment"
 
-data AttendeeDB
-  = AttendeeDB
-    { dbAttendees :: V.Vector (Maybe Attendee)
-    , dbPath :: F.FilePath
-    }
+data AttendeeDB = AttendeeDB
+  { dbAttendees :: V.Vector (Maybe Attendee)
+  , dbPath :: F.FilePath
+  }
   deriving Show
 
 type DBAction = S.State AttendeeDB
@@ -99,15 +97,13 @@ loadDB path = do
   m <- attendees `fmap` BS.readFile path
   return AttendeeDB {dbAttendees = m, dbPath = path}
   where
-    attendees bs
-      = case attendees' bs of
-         A.Success v -> v
-         _           -> error "invalid json"
+    attendees bs = case attendees' bs of
+      A.Success v -> v
+      _           -> error "invalid json"
 
-    attendees' bs
-      = case At.parseOnly A.json bs of
-          Right v -> AT.parse A.parseJSON v
-          Left e  -> A.Error e
+    attendees' bs = case At.parseOnly A.json bs of
+      Right v -> AT.parse A.parseJSON v
+      Left e  -> A.Error e
 
 saveDB :: AttendeeDB -> IO ()
 saveDB db = LBS.writeFile (dbPath db) $ A.encode $ dbAttendees db
