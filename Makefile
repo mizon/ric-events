@@ -1,7 +1,10 @@
-test:
-	@cabal build && cabal test
+build:
+	@cabal build
 
-server:
+test: build
+	cabal test
+
+server: build
 	@./dist/build/run-server/run-server -p 8000
 
-.PHONY: test server
+.PHONY: build test server
