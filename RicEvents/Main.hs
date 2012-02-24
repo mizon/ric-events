@@ -6,35 +6,30 @@ module RicEvents.Main
 
 import qualified RicEvents.Database as D
 
-import qualified Network.CGI as C
 import qualified Network.Wai as W
 import qualified Network.HTTP.Types as HT
 import qualified Text.XHtml as H
-import qualified Text.XHtml.Strict as HS
-import Text.XHtml ((<<), (+++), (</>), (<->))
-import qualified Control.Monad.Reader as R
-import qualified Data.ByteString as BS
+import Text.XHtml ((<<), (+++), (</>), (<->), (!))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BC
+import qualified Control.Monad.Reader as R
 import Control.Monad.Trans
-import Control.Monad
 import Control.Applicative
 
 waiApp :: W.Application
-waiApp req = do
-  return $ htmlResponse html
-  where
-    html = render mainView RenderContext
-      { rcAttendees = []
-      , rcViewTitle = "hogefuga"
-      , rcHeaderMessage = "konnitiaha"
-      , rcRequest = req
-      }
+waiApp req = htmlResponse <$> do
+  message <- liftIO $ readFile "./message.txt"
+  return $ render mainView RenderContext
+    { rcAttendees = []
+    , rcViewTitle = "hogefuga"
+    , rcHeaderMessage = message
+    , rcRequest = req
+    }
 
 htmlResponse :: H.Html -> W.Response
 htmlResponse h
   = success [(HT.headerContentType "text/html")]
-      $ LBS.fromChunks [BC.pack $ H.showHtml h]
+      $ LBS.fromChunks [BC.pack $ H.prettyHtml h]
 
 plainResponse :: String -> W.Response
 plainResponse str
@@ -51,18 +46,30 @@ data RenderContext
     , rcRequest :: W.Request
     }
 
-type View = R.Reader RenderContext H.Html
+type View = R.Reader RenderContext
 
-render :: View -> RenderContext -> H.Html
+render :: View H.Html -> RenderContext -> H.Html
 render = R.runReader
 
-mainView :: View
+mainView :: View H.Html
 mainView = H.concatHtml <$> sequence [header, body]
   where
-    header = return $ H.header << H.thetitle << title
+    header = do
+      t <- title
+      return $ H.header << (linkCSS +++ (H.thetitle << t))
 
-    body = return
-         $ H.h1 << title
-       +++ H.paragraph << ("hogefuga, nuga" :: String)
+    linkCSS
+      = H.thelink !
+          [ H.rel "stylesheet"
+          , H.src "/ric-events.css"
+          , H.thetype "text/css"
+          ] << H.noHtml
 
-    title = "this is ric-events script" :: String
+    body = do
+      h <- headerMessage
+      t <- title
+      return $ H.h1 << t +++ H.paragraph << h
+
+    title = R.asks rcViewTitle
+
+    headerMessage = R.asks rcHeaderMessage
