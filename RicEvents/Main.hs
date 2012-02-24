@@ -82,10 +82,10 @@ attendees = do
 
 attendeeToTr :: D.Attendee -> H.HtmlTable
 attendeeToTr a
-    = H.cell $ tdMaybe D.aId
-           <-> td D.aName
-           <-> td D.aCircle
-           <-> td D.aComment
+  = H.cell $ tdMaybe D.aId
+         <-> td D.aName
+         <-> td D.aCircle
+         <-> td D.aComment
   where
     tdMaybe f = H.cell $ H.td << (fromMaybe "" $ show <$> f a)
 
