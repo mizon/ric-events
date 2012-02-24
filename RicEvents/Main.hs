@@ -73,3 +73,19 @@ mainView = H.concatHtml <$> sequence [header, body]
     title = R.asks rcViewTitle
 
     headerMessage = R.asks rcHeaderMessage
+
+attendees :: View H.HtmlTable
+attendees = do
+  as <- R.asks rcAttendees
+  return $ foldl1 (<->) $ map attendeeToTr as
+
+attendeeToTr :: D.Attendee -> H.HtmlTable
+attendeeToTr a
+    = H.cell (H.tr << (tdMaybe D.aId
+                   </> td D.aName
+                   </> td D.aCircle
+                   </> td D.aComment))
+  where
+    tdMaybe f = H.cell $ H.td << maybe "" id (show <$> f a)
+
+    td f = H.cell $ H.td << f a
