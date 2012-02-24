@@ -12,39 +12,38 @@ import qualified Text.XHtml as H
 import Text.XHtml ((<<), (+++), (</>), (<->), (!))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BC
+import qualified Data.Vector as V
 import qualified Control.Monad.Reader as R
+import Data.Maybe
 import Control.Monad.Trans
 import Control.Applicative
 
 waiApp :: W.Application
 waiApp req = htmlResponse <$> do
   message <- liftIO $ readFile "./message.txt"
+  as <- liftIO $ V.toList <$> D.withDB "./hoge.json" D.getAllAttendees
   return $ render mainView RenderContext
-    { rcAttendees = []
+    { rcAttendees = as
     , rcViewTitle = "hogefuga"
     , rcHeaderMessage = message
     , rcRequest = req
     }
 
 htmlResponse :: H.Html -> W.Response
-htmlResponse h
-  = success [(HT.headerContentType "text/html")]
-      $ LBS.fromChunks [BC.pack $ H.prettyHtml h]
+htmlResponse h = success "text/html" $ LBS.fromChunks [BC.pack $ H.prettyHtml h]
 
 plainResponse :: String -> W.Response
-plainResponse str
-  = success [(HT.headerContentType "text/plain")] $ LBS.fromChunks [BC.pack str]
+plainResponse str = success "text/plain" $ LBS.fromChunks [BC.pack str]
 
-success :: HT.ResponseHeaders -> LBS.ByteString -> W.Response
-success = W.responseLBS HT.status200
+success :: HT.Ascii -> LBS.ByteString -> W.Response
+success ctype = W.responseLBS HT.status200 [(HT.headerContentType ctype)]
 
-data RenderContext
-  = RenderContext
-    { rcAttendees :: [D.Attendee]
-    , rcViewTitle :: String
-    , rcHeaderMessage :: String
-    , rcRequest :: W.Request
-    }
+data RenderContext = RenderContext
+  { rcAttendees :: [D.Attendee]
+  , rcViewTitle :: String
+  , rcHeaderMessage :: String
+  , rcRequest :: W.Request
+  }
 
 type View = R.Reader RenderContext
 
@@ -58,34 +57,36 @@ mainView = H.concatHtml <$> sequence [header, body]
       t <- title
       return $ H.header << (linkCSS +++ (H.thetitle << t))
 
-    linkCSS
-      = H.thelink !
-          [ H.rel "stylesheet"
-          , H.src "/ric-events.css"
-          , H.thetype "text/css"
-          ] << H.noHtml
+    linkCSS = H.thelink !
+      [ H.rel "stylesheet"
+      , H.src "/ric-events.css"
+      , H.thetype "text/css"
+      ] << H.noHtml
 
-    body = do
-      h <- headerMessage
-      t <- title
-      return $ H.h1 << t +++ H.paragraph << h
+    body = H.concatHtml <$> sequence
+      [ (H.h1 <<) <$> title
+      , (H.paragraph <<) <$> R.asks rcHeaderMessage
+      , (H.paragraph <<) <$> attendees
+      ]
 
     title = R.asks rcViewTitle
 
-    headerMessage = R.asks rcHeaderMessage
-
-attendees :: View H.HtmlTable
+attendees :: View H.Html
 attendees = do
   as <- R.asks rcAttendees
-  return $ foldl1 (<->) $ map attendeeToTr as
+  return $ H.table <<
+    if length as > 0 then
+      foldl1 (</>) $ map attendeeToTr as
+    else
+      H.cell H.noHtml
 
 attendeeToTr :: D.Attendee -> H.HtmlTable
 attendeeToTr a
-    = H.cell (H.tr << (tdMaybe D.aId
-                   </> td D.aName
-                   </> td D.aCircle
-                   </> td D.aComment))
+    = H.cell $ tdMaybe D.aId
+           <-> td D.aName
+           <-> td D.aCircle
+           <-> td D.aComment
   where
-    tdMaybe f = H.cell $ H.td << maybe "" id (show <$> f a)
+    tdMaybe f = H.cell $ H.td << (fromMaybe "" $ show <$> f a)
 
     td f = H.cell $ H.td << f a
