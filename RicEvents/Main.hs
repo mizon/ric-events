@@ -11,10 +11,10 @@ import qualified Network.HTTP.Types as HT
 import qualified Text.XHtml as H
 import Text.XHtml ((<<), (+++), (</>), (<->), (!))
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Char8 as BC
 import qualified Data.Vector as V
 import qualified Control.Monad.Reader as R
 import Data.Maybe
+import Data.String
 import Control.Monad.Trans
 import Control.Applicative
 
@@ -30,10 +30,10 @@ waiApp req = htmlResponse <$> do
     }
 
 htmlResponse :: H.Html -> W.Response
-htmlResponse h = success "text/html" $ LBS.fromChunks [BC.pack $ H.prettyHtml h]
+htmlResponse = success "text/html" . fromString . H.prettyHtml
 
 plainResponse :: String -> W.Response
-plainResponse str = success "text/plain" $ LBS.fromChunks [BC.pack str]
+plainResponse = success "text/plain" . fromString
 
 success :: HT.Ascii -> LBS.ByteString -> W.Response
 success ctype = W.responseLBS HT.status200 [(HT.headerContentType ctype)]
