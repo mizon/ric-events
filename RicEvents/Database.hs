@@ -22,13 +22,12 @@ import qualified System.FilePath as F
 
 import Prelude hiding (all)
 
-data Attendee
-  = Attendee
-    { aId :: Maybe Int
-    , aName :: String
-    , aCircle :: String
-    , aComment :: String
-    }
+data Attendee = Attendee
+  { aId :: Maybe Int
+  , aName :: String
+  , aCircle :: String
+  , aComment :: String
+  }
   deriving Show
 
 mkAttendee :: String -> String -> String -> Attendee
