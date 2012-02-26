@@ -35,21 +35,11 @@ waiApp req = htmlResponse <$> do
     }
 
 waiApp2 :: W.Application
-waiApp2 req@W.Request {W.requestMethod = m, W.requestBody = b}
-  | m == "GET"  = handleGET
+waiApp2 req@W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q}
+  | m == "GET"  = run handleGET q
   | m == "POST" = handlePOST
   | otherwise   = return errorResponse
   where
-    handleGET = htmlResponse <$> do
-      message <- liftIO $ readFile "./message.txt"
-      as <- liftIO $ V.toList <$> D.withDB "./hoge.json" D.getAllAttendees
-      return $ render mainView RenderContext
-        { rcAttendees = as
-        , rcViewTitle = "hogefuga"
-        , rcHeaderMessage = message
-        , rcQuery = W.queryString req
-        }
-
     handlePOST = toResponse =<< postQuery "action"
 
     toResponse (Just "new") = do
@@ -76,7 +66,7 @@ waiApp2 req@W.Request {W.requestMethod = m, W.requestBody = b}
 
 type Handler = R.Reader HT.Query
 
-run :: Handler (C.ResourceT IO W.Response) -> HT.Query -> (C.ResourceT IO W.Response)
+run :: Handler (C.ResourceT IO W.Response) -> HT.Query -> C.ResourceT IO W.Response
 run = R.runReader
 
 handleGET :: Handler (C.ResourceT IO W.Response)
