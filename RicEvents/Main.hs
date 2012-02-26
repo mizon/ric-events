@@ -35,42 +35,22 @@ waiApp req = htmlResponse <$> do
     }
 
 waiApp2 :: W.Application
-waiApp2 req@W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q}
-  | m == "GET"  = run handleGET q
-  | m == "POST" = handlePOST
+waiApp2 W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q}
+  | m == "GET"  = handle hGET q
+  | m == "POST" = handle hPOST =<< queryStream
   | otherwise   = return errorResponse
   where
-    handlePOST = toResponse =<< postQuery "action"
-
-    toResponse (Just "new") = do
-      form <- AttendeeForm
-          <$> postQuery "name"
-          <*> postQuery "circle"
-          <*> postQuery "comment"
-      case validate form of
-        Just attendee -> do
-          liftIO $ D.withDB "./hoge.json" $ D.putAttendee attendee
-          return $ redirectResponse "/"
-        Nothing ->
-          return $ errorResponse
-    toResponse (Just _) = return errorResponse
-    toResponse Nothing  = return errorResponse
-
-    postQuery key = do
-      value <- join <$> postQuery' key
-      return $ BC.unpack <$> value
-
-    postQuery' key = do
-      body <- liftIO $ C.runResourceT (b C.$$ CL.head)
-      return $ lookup key =<< HT.parseQuery <$> body
+    queryStream = do
+      body <- b C.$$ CL.head
+      return $ HT.parseQuery $ fromMaybe "" body
 
 type Handler = R.Reader HT.Query
 
-run :: Handler (C.ResourceT IO W.Response) -> HT.Query -> C.ResourceT IO W.Response
-run = R.runReader
+handle :: Handler (C.ResourceT IO W.Response) -> HT.Query -> C.ResourceT IO W.Response
+handle = R.runReader
 
-handleGET :: Handler (C.ResourceT IO W.Response)
-handleGET = do
+hGET :: Handler (C.ResourceT IO W.Response)
+hGET = do
   q <- R.ask
   return $ htmlResponse <$> do
     message <- liftIO $ readFile "./message.txt"
@@ -82,8 +62,22 @@ handleGET = do
       , rcQuery = q
       }
 
-handlePOST :: Handler (C.ResourceT IO W.Response)
-handlePOST = undefined
+hPOST :: Handler (C.ResourceT IO W.Response)
+hPOST = do
+  action <- query "action"
+  case action of
+    Just "new" -> newResponse
+    _          -> invalidQuery
+  where
+    newResponse = do
+      form <- AttendeeForm <$> query "name" <*> query "circle" <*> query "comment"
+      case validate form of
+        Just attendee -> return $ do
+          liftIO $ D.withDB "./hoge.json" $ D.putAttendee attendee
+          return $ redirectResponse "/"
+        Nothing -> invalidQuery
+
+    invalidQuery = return $ return errorResponse
 
 query :: String -> Handler (Maybe String)
 query key = do
