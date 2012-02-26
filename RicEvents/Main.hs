@@ -10,7 +10,6 @@ import qualified Network.Wai as W
 import qualified Network.HTTP.Types as HT
 import qualified Text.XHtml as H
 import Text.XHtml ((<<), (+++), (</>), (<->), (!))
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Vector as V
 import qualified Data.Conduit as C
@@ -73,23 +72,21 @@ query key = do
   return $ BC.unpack <$> join v
 
 htmlResponse :: H.Html -> W.Response
-htmlResponse = success "text/html" . fromString . H.prettyHtml
+htmlResponse = W.responseLBS HT.status200
+  [HT.headerContentType "text/html"] . fromString . H.prettyHtml
 
 redirectResponse :: String -> W.Response
 redirectResponse url = W.responseLBS HT.status301 [("Location", fromString url)] ""
 
 errorResponse :: W.Response
-errorResponse = W.responseLBS HT.status400 [] "invalid request"
-
-success :: HT.Ascii -> LBS.ByteString -> W.Response
-success ctype = W.responseLBS HT.status200 [(HT.headerContentType ctype)]
+errorResponse = W.responseLBS HT.status400
+  [HT.headerContentType "test/plain"] "invalid request"
 
 data AttendeeForm = AttendeeForm
   { aName :: Maybe String
   , aCircle :: Maybe String
   , aComment :: Maybe String
   }
-  deriving Show
 
 validate :: AttendeeForm -> Maybe D.Attendee
 validate AttendeeForm
