@@ -2,7 +2,7 @@ build:
 	@cabal build
 
 test: build
-	cabal test
+	@cabal test
 
 server: build
 	@./dist/build/run-server/run-server -p 8000
