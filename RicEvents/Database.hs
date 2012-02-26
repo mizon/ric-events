@@ -76,14 +76,14 @@ getAllAttendees :: DBAction (V.Vector Attendee)
 getAllAttendees = S.gets all
 
 get :: Int -> AttendeeDB -> Maybe Attendee
-get i (AttendeeDB {dbAttendees = as}) = join $ as V.!? i
+get i AttendeeDB {dbAttendees = as} = join $ as V.!? i
 
 put :: Attendee -> AttendeeDB -> AttendeeDB
-put a (db@AttendeeDB {dbAttendees = as})
+put a db@AttendeeDB {dbAttendees = as}
   = db {dbAttendees = as `V.snoc` Just a {aId = Just $ V.length as}}
 
 delete :: Int -> AttendeeDB -> AttendeeDB
-delete i (db@AttendeeDB {dbAttendees = as}) = deleteIfExist $ get i db
+delete i db@AttendeeDB {dbAttendees = as} = deleteIfExist $ get i db
   where
     deleteIfExist (Just _) = db {dbAttendees = as V.// [(i, Nothing)]}
     deleteIfExist Nothing  = db
