@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module RicEvents.Main
-  ( waiApp, waiApp2
+  ( waiApp
   ) where
 
 import qualified RicEvents.Database as D
@@ -11,7 +11,6 @@ import qualified Network.HTTP.Types as HT
 import qualified Text.XHtml as H
 import Text.XHtml ((<<), (+++), (</>), (<->), (!))
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Vector as V
 import qualified Data.Conduit as C
@@ -24,18 +23,7 @@ import Control.Monad
 import Control.Applicative
 
 waiApp :: W.Application
-waiApp req = htmlResponse <$> do
-  message <- liftIO $ readFile "./message.txt"
-  as <- liftIO $ V.toList <$> D.withDB "./hoge.json" D.getAllAttendees
-  return $ render mainView RenderContext
-    { rcAttendees = as
-    , rcViewTitle = "hogefuga"
-    , rcHeaderMessage = message
-    , rcQuery = W.queryString req
-    }
-
-waiApp2 :: W.Application
-waiApp2 W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q}
+waiApp W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q}
   | m == "GET"  = handle hGET q
   | m == "POST" = handle hPOST =<< queryStream
   | otherwise   = return errorResponse
@@ -84,6 +72,18 @@ query key = do
   v <- R.asks $ lookup $ fromString key
   return $ BC.unpack <$> join v
 
+htmlResponse :: H.Html -> W.Response
+htmlResponse = success "text/html" . fromString . H.prettyHtml
+
+redirectResponse :: String -> W.Response
+redirectResponse url = W.responseLBS HT.status301 [("Location", fromString url)] ""
+
+errorResponse :: W.Response
+errorResponse = W.responseLBS HT.status400 [] "invalid request"
+
+success :: HT.Ascii -> LBS.ByteString -> W.Response
+success ctype = W.responseLBS HT.status200 [(HT.headerContentType ctype)]
+
 data AttendeeForm = AttendeeForm
   { aName :: Maybe String
   , aCircle :: Maybe String
@@ -102,21 +102,6 @@ validate AttendeeForm
   | otherwise
       = Just $ D.mkAttendee name circle $ fromMaybe "" comment
 validate _ = Nothing
-
-htmlResponse :: H.Html -> W.Response
-htmlResponse = success "text/html" . fromString . H.prettyHtml
-
-redirectResponse :: String -> W.Response
-redirectResponse url = W.responseLBS HT.status301 [("Location", fromString url)] ""
-
-plainResponse :: String -> W.Response
-plainResponse = success "text/plain" . fromString
-
-errorResponse :: W.Response
-errorResponse = W.responseLBS HT.status400 [] "invalid request"
-
-success :: HT.Ascii -> LBS.ByteString -> W.Response
-success ctype = W.responseLBS HT.status200 [(HT.headerContentType ctype)]
 
 data RenderContext = RenderContext
   { rcAttendees :: [D.Attendee]

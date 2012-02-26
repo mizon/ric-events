@@ -26,4 +26,6 @@ data ServerOption
   = PortNumber Int
 
 optSpec :: [O.OptDescr ServerOption]
-optSpec = [O.Option ['p'] ["port"] (O.ReqArg (PortNumber . read) "PORT") "server port"]
+optSpec =
+  [ O.Option ['p'] ["port"] (O.ReqArg (PortNumber . read) "PORT") "server port"
+  ]
