@@ -11,9 +11,10 @@ import qualified Network.HTTP.Types as HT
 import qualified Text.XHtml as H
 import Text.XHtml ((<<), (+++), (</>), (<->), (!))
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Vector as V
-import Data.Conduit (runResourceT, ($$))
+import qualified Data.Conduit as C
 import qualified Data.Conduit.List as CL
 import qualified Control.Monad.Reader as R
 import Data.Maybe
@@ -21,8 +22,6 @@ import Data.String
 import Control.Monad.Trans
 import Control.Monad
 import Control.Applicative
-
-import Debug.Trace
 
 waiApp :: W.Application
 waiApp req = htmlResponse <$> do
@@ -32,7 +31,7 @@ waiApp req = htmlResponse <$> do
     { rcAttendees = as
     , rcViewTitle = "hogefuga"
     , rcHeaderMessage = message
-    , rcRequest = req
+    , rcQuery = W.queryString req
     }
 
 waiApp2 :: W.Application
@@ -48,7 +47,7 @@ waiApp2 req@W.Request {W.requestMethod = m, W.requestBody = b}
         { rcAttendees = as
         , rcViewTitle = "hogefuga"
         , rcHeaderMessage = message
-        , rcRequest = req
+        , rcQuery = W.queryString req
         }
 
     handlePOST = toResponse =<< postQuery "action"
@@ -64,23 +63,49 @@ waiApp2 req@W.Request {W.requestMethod = m, W.requestBody = b}
           return $ redirectResponse "/"
         Nothing ->
           return $ errorResponse
-    toResponse Nothing = return errorResponse
+    toResponse (Just _) = return errorResponse
+    toResponse Nothing  = return errorResponse
 
     postQuery key = do
       value <- join <$> postQuery' key
       return $ BC.unpack <$> value
 
     postQuery' key = do
-      b_ <- liftIO requestBody
-      return $ lookup key =<< HT.parseQuery <$> b_
+      body <- liftIO $ C.runResourceT (b C.$$ CL.head)
+      return $ lookup key =<< HT.parseQuery <$> body
 
-    requestBody = runResourceT (b $$ CL.head)
+type Handler = R.Reader HT.Query
+
+run :: Handler (C.ResourceT IO W.Response) -> HT.Query -> (C.ResourceT IO W.Response)
+run = R.runReader
+
+handleGET :: Handler (C.ResourceT IO W.Response)
+handleGET = do
+  q <- R.ask
+  return $ htmlResponse <$> do
+    message <- liftIO $ readFile "./message.txt"
+    as <- liftIO $ V.toList <$> D.withDB "./hoge.json" D.getAllAttendees
+    return $ render mainView RenderContext
+      { rcAttendees = as
+      , rcViewTitle = "hogefuga"
+      , rcHeaderMessage = message
+      , rcQuery = q
+      }
+
+handlePOST :: Handler (C.ResourceT IO W.Response)
+handlePOST = undefined
+
+query :: String -> Handler (Maybe String)
+query key = do
+  v <- R.asks $ lookup $ fromString key
+  return $ BC.unpack <$> join v
 
 data AttendeeForm = AttendeeForm
   { aName :: Maybe String
   , aCircle :: Maybe String
   , aComment :: Maybe String
   }
+  deriving Show
 
 validate :: AttendeeForm -> Maybe D.Attendee
 validate AttendeeForm
@@ -113,7 +138,7 @@ data RenderContext = RenderContext
   { rcAttendees :: [D.Attendee]
   , rcViewTitle :: String
   , rcHeaderMessage :: String
-  , rcRequest :: W.Request
+  , rcQuery :: HT.Query
   }
 
 type View = R.Reader RenderContext
@@ -165,8 +190,22 @@ attendeeToTr a
 
 newForm :: View H.Html
 newForm = do
-  return $ H.form ! [H.action "/", H.method "post"] << innerForm
+  return $ H.form ! [H.action "/", H.method "post"] << inner
   where
-    innerForm = H.input ! [H.thetype "hidden", H.name "action", H.value "new"]
-            +++ H.input ! [H.thetype "hidden", H.name "hoge", H.value "hogefuga"]
-            +++ H.input ! [H.thetype "submit", H.value "send"]
+    inner = H.input ! [H.thetype "hidden", H.name "action", H.value "new"]
+        +++ H.defList
+            [ inputText "attendee-name" "name"
+            , inputText "attendee-circle" "circle"
+            , inputText "attendee-comment" "comment"
+            , inputPassword "attendee-password" "password"
+            ]
+        +++ H.input ! [H.thetype "submit", H.value "send"]
+
+    inputText = input "text"
+
+    inputPassword = input "password"
+
+    input type_ label dest =
+      ( H.label ! [H.thefor label] << label
+      , H.input ! [H.thetype type_, H.name dest, H.identifier label]
+      )
