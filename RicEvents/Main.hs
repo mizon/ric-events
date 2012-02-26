@@ -95,9 +95,9 @@ validate AttendeeForm
   , aComment = comment
   }
   | null name || null circle
-      = Nothing
+    = Nothing
   | otherwise
-      = Just $ D.mkAttendee name circle $ fromMaybe "" comment
+    = Just $ D.mkAttendee name circle $ fromMaybe "" comment
 validate _ = Nothing
 
 data RenderContext = RenderContext
