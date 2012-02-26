@@ -51,7 +51,7 @@ waiApp2 req@W.Request {W.requestMethod = m, W.queryString = q}
 
     toResponse (Just "new")    = undefined
     toResponse (Just "delete") = undefined
-    toResponse Nothing         = return errorResponse
+    toResponse _               = return errorResponse
 
     query key = join $ lookup key q
 
