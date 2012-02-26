@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module RicEvents.Main
-  ( waiApp
+  ( waiApp, waiApp2
   ) where
 
 import qualified RicEvents.Database as D
@@ -13,12 +13,16 @@ import Text.XHtml ((<<), (+++), (</>), (<->), (!))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Vector as V
+import Data.Conduit (runResourceT, ($$))
+import qualified Data.Conduit.List as CL
 import qualified Control.Monad.Reader as R
 import Data.Maybe
 import Data.String
 import Control.Monad.Trans
 import Control.Monad
 import Control.Applicative
+
+import Debug.Trace
 
 waiApp :: W.Application
 waiApp req = htmlResponse <$> do
@@ -32,7 +36,7 @@ waiApp req = htmlResponse <$> do
     }
 
 waiApp2 :: W.Application
-waiApp2 req@W.Request {W.requestMethod = m, W.queryString = q}
+waiApp2 req@W.Request {W.requestMethod = m, W.requestBody = b}
   | m == "GET"  = handleGET
   | m == "POST" = handlePOST
   | otherwise   = return errorResponse
@@ -47,22 +51,60 @@ waiApp2 req@W.Request {W.requestMethod = m, W.queryString = q}
         , rcRequest = req
         }
 
-    handlePOST = toResponse $ BC.unpack <$> query "action"
+    handlePOST = toResponse =<< postQuery "action"
 
-    toResponse (Just "new")    = undefined
-    toResponse (Just "delete") = undefined
-    toResponse _               = return errorResponse
+    toResponse (Just "new") = do
+      form <- AttendeeForm
+          <$> postQuery "name"
+          <*> postQuery "circle"
+          <*> postQuery "comment"
+      case validate form of
+        Just attendee -> do
+          liftIO $ D.withDB "./hoge.json" $ D.putAttendee attendee
+          return $ redirectResponse "/"
+        Nothing ->
+          return $ errorResponse
+    toResponse Nothing = return errorResponse
 
-    query key = join $ lookup key q
+    postQuery key = do
+      value <- join <$> postQuery' key
+      return $ BC.unpack <$> value
+
+    postQuery' key = do
+      b_ <- liftIO requestBody
+      return $ lookup key =<< HT.parseQuery <$> b_
+
+    requestBody = runResourceT (b $$ CL.head)
+
+data AttendeeForm = AttendeeForm
+  { aName :: Maybe String
+  , aCircle :: Maybe String
+  , aComment :: Maybe String
+  }
+
+validate :: AttendeeForm -> Maybe D.Attendee
+validate AttendeeForm
+  { aName = Just name
+  , aCircle = Just circle
+  , aComment = comment
+  }
+  | null name || null circle
+      = Nothing
+  | otherwise
+      = Just $ D.mkAttendee name circle $ fromMaybe "" comment
+validate _ = Nothing
 
 htmlResponse :: H.Html -> W.Response
 htmlResponse = success "text/html" . fromString . H.prettyHtml
+
+redirectResponse :: String -> W.Response
+redirectResponse url = W.responseLBS HT.status301 [("Location", fromString url)] ""
 
 plainResponse :: String -> W.Response
 plainResponse = success "text/plain" . fromString
 
 errorResponse :: W.Response
-errorResponse = W.responseLBS HT.status400 [] ""
+errorResponse = W.responseLBS HT.status400 [] "invalid request"
 
 success :: HT.Ascii -> LBS.ByteString -> W.Response
 success ctype = W.responseLBS HT.status200 [(HT.headerContentType ctype)]
@@ -96,6 +138,7 @@ mainView = H.concatHtml <$> sequence [header, body]
       [ (H.h1 <<) <$> title
       , (H.paragraph <<) <$> R.asks rcHeaderMessage
       , (H.paragraph <<) <$> attendees
+      , (H.paragraph <<) <$> newForm
       ]
 
     title = R.asks rcViewTitle
@@ -119,3 +162,11 @@ attendeeToTr a
     tdMaybe f = H.cell $ H.td << (fromMaybe "" $ show <$> f a)
 
     td f = H.cell $ H.td << f a
+
+newForm :: View H.Html
+newForm = do
+  return $ H.form ! [H.action "/", H.method "post"] << innerForm
+  where
+    innerForm = H.input ! [H.thetype "hidden", H.name "action", H.value "new"]
+            +++ H.input ! [H.thetype "hidden", H.name "hoge", H.value "hogefuga"]
+            +++ H.input ! [H.thetype "submit", H.value "send"]
