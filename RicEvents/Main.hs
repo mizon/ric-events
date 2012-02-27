@@ -11,7 +11,6 @@ import qualified Network.Wai as W
 import qualified Network.HTTP.Types as HT
 import qualified Text.XHtml as H
 import qualified Data.ByteString.Char8 as BC
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Data.Vector as V
 import qualified Data.Conduit as C
