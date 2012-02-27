@@ -82,9 +82,7 @@ query key = do
   return $ BC.unpack <$> join v
 
 queryDigit :: String -> Handler (Maybe Int)
-queryDigit key = do
-  v <- query key
-  return $ toInt =<< v
+queryDigit key = (toInt =<<) <$> query key
   where
     toInt str = case P.runP (P.many1 P.digit) [] [] key of
       Right v -> Just $ read v
