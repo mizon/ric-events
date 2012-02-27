@@ -12,8 +12,10 @@ import qualified Data.Aeson.Types as AT
 import qualified Data.Attoparsec as At
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Lazy.Char8 ()
 import qualified Data.Vector as V
 import qualified Data.Maybe as Mb
+import qualified Data.Digest.Pure.SHA as SHA
 import System.IO
 import Control.Applicative
 import Control.Monad
@@ -27,7 +29,7 @@ data Attendee = Attendee
   , aName :: String
   , aCircle :: String
   , aComment :: String
-  , aEncryptedPassword :: String
+  , aEncryptedPassword :: LBS.ByteString
   }
   deriving Show
 
