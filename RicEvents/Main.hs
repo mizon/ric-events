@@ -80,7 +80,7 @@ redirectResponse url = W.responseLBS HT.status301 [("Location", fromString url)]
 
 errorResponse :: W.Response
 errorResponse = W.responseLBS HT.status400
-  [HT.headerContentType "test/plain"] "invalid request"
+  [HT.headerContentType "text/plain"] "invalid request"
 
 data AttendeeForm = AttendeeForm
   { aName :: Maybe String
