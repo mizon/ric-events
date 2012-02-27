@@ -65,7 +65,7 @@ checkDB = TestList
 
     expectAt i attendee_ db = D.get i db @?= Just attendee_ {D.aId = Just i}
 
-    attendee = D.mkAttendee "mizon" "ricora" "yattaneBokutin"
+    attendee = D.mkAttendee "mizon" "ricora" "yattaneBokutin" "pass"
 
     cleanUp = do
       Di.removeFile dbPath

@@ -33,9 +33,9 @@ data Attendee = Attendee
   }
   deriving Show
 
-mkAttendee :: String -> String -> String -> Attendee
-mkAttendee name circle comment
-  = Attendee Nothing name circle comment ""
+mkAttendee :: String -> String -> String -> LBS.ByteString -> Attendee
+mkAttendee name circle comment password
+  = Attendee Nothing name circle comment password
 
 instance A.ToJSON Attendee where
   toJSON (Attendee id_ name circle comment password) = A.object

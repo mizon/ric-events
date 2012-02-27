@@ -24,13 +24,11 @@ mainView = H.concatHtml <$> sequence [header, body]
       , H.thetype "text/css"
       ] << H.noHtml
 
-    body = H.concatHtml <$> sequence
-      [ (H.h1 <<) <$> title
-      , (H.paragraph <<) <$> R.asks rcHeaderMessage
-      , (H.paragraph <<) <$> attendees
-      , (H.paragraph <<) <$> return newForm
-      , (H.paragraph <<) <$> return deleteForm
-      ]
+    body = do
+      t <- (H.h1 <<) <$> title
+      h <- (H.paragraph <<) <$> R.asks rcHeaderMessage
+      as <- attendees
+      return $ H.concatHtml [t, h, as, newForm, deleteForm]
 
     title = R.asks rcViewTitle
 

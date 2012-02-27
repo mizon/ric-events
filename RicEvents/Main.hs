@@ -11,6 +11,7 @@ import qualified Network.Wai as W
 import qualified Network.HTTP.Types as HT
 import qualified Text.XHtml as H
 import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Data.Vector as V
 import qualified Data.Conduit as C
 import qualified Data.Conduit.List as CL
@@ -59,7 +60,10 @@ hPOST = do
     _             -> invalidQuery
   where
     newResponse = do
-      form <- AttendeeForm <$> query "name" <*> query "circle" <*> query "comment"
+      form <- AttendeeForm <$> query "name"
+                           <*> query "circle"
+                           <*> query "comment"
+                           <*> query "password"
       case validate form of
         Just attendee -> return $ do
           liftIO $ D.withDB "./hoge.json" $ D.putAttendee attendee
@@ -103,6 +107,7 @@ data AttendeeForm = AttendeeForm
   { aName :: Maybe String
   , aCircle :: Maybe String
   , aComment :: Maybe String
+  , aPassword :: Maybe String
   }
 
 validate :: AttendeeForm -> Maybe D.Attendee
@@ -110,9 +115,10 @@ validate AttendeeForm
   { aName = Just name
   , aCircle = Just circle
   , aComment = comment
+  , aPassword = Just password
   }
-  | null name || null circle
+  | any null [name, circle, password]
     = Nothing
   | otherwise
-    = Just $ D.mkAttendee name circle $ fromMaybe "" comment
+    = Just $ D.mkAttendee name circle (fromMaybe "" comment) $ BLC.pack password
 validate _ = Nothing
