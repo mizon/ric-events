@@ -55,10 +55,10 @@ checkDB = TestList
         D.putAttendee attendee
         D.putAttendee attendee
         D.putAttendee attendee
-      all <- D.withDB dbPath $ do
+      all_ <- D.withDB dbPath $ do
         D.deleteAttendee 0
         D.getAllAttendees
-      V.length all @?= 2
+      V.length all_ @?= 2
   ]
   where
     dbPath = "./hoge.json"
