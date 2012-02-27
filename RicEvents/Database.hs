@@ -27,19 +27,21 @@ data Attendee = Attendee
   , aName :: String
   , aCircle :: String
   , aComment :: String
+  , aEncryptedPassword :: String
   }
   deriving Show
 
 mkAttendee :: String -> String -> String -> Attendee
 mkAttendee name circle comment
-  = Attendee Nothing name circle comment
+  = Attendee Nothing name circle comment ""
 
 instance A.ToJSON Attendee where
-  toJSON (Attendee id_ name circle comment) = A.object
+  toJSON (Attendee id_ name circle comment password) = A.object
     [ "id" .=  id_
     , "name" .= name
     , "circle" .= circle
     , "comment" .= comment
+    , "encrypted-password" .= password
     ]
 
 instance A.FromJSON Attendee where
@@ -48,6 +50,7 @@ instance A.FromJSON Attendee where
                <*> o .: "name"
                <*> o .: "circle"
                <*> o .: "comment"
+               <*> o .: "encrypted-password"
 
 data AttendeeDB = AttendeeDB
   { dbAttendees :: V.Vector (Maybe Attendee)
