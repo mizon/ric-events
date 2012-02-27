@@ -67,7 +67,7 @@ attendeeToTr a
     td f = H.cell $ H.td << f a
 
 newForm :: H.Html
-newForm = H.form ! [H.action "/", H.method "post"] << inner
+newForm = postForm "Register" inner
   where
     inner = H.input ! [H.thetype "hidden", H.name "action", H.value "new"]
         +++ H.defList
@@ -76,7 +76,7 @@ newForm = H.form ! [H.action "/", H.method "post"] << inner
             , inputText "attendee-comment" "comment"
             , inputPassword "attendee-password" "password"
             ]
-        +++ H.input ! [H.thetype "submit", H.value "send"]
+        +++ submit "send"
 
     inputText = input "text"
 
@@ -88,12 +88,18 @@ newForm = H.form ! [H.action "/", H.method "post"] << inner
       )
 
 deleteForm :: H.Html
-deleteForm = H.h2 << ("Delete Attendee" :: String)
-         +++ H.form ! [H.action "/", H.method "post"] << inner
+deleteForm = postForm "Delete" inner
   where
     inner = H.input ! [H.thetype "hidden", H.name "action", H.value "delete"]
         +++ input "text" "attendee-id" "id"
-        +++ H.input ! [H.thetype "submit", H.value "send"]
+        +++ submit "send"
 
     input type_ label dest = H.label ! [H.thefor label] << label
                          +++ H.input ! [H.thetype type_, H.name dest, H.identifier label]
+
+submit :: String -> H.Html
+submit value = H.input ! [H.thetype "submit", H.value value]
+
+postForm :: String -> H.Html -> H.Html
+postForm title inner = H.h2 << title
+                   +++ H.form ! [H.action "/", H.method "post"] << inner
