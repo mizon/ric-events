@@ -28,7 +28,7 @@ mainView = H.concatHtml <$> sequence [header, body]
       [ (H.h1 <<) <$> title
       , (H.paragraph <<) <$> R.asks rcHeaderMessage
       , (H.paragraph <<) <$> attendees
-      , (H.paragraph <<) <$> newForm
+      , (H.paragraph <<) <$> return newForm
       , (H.paragraph <<) <$> return deleteForm
       ]
 
@@ -66,9 +66,8 @@ attendeeToTr a
 
     td f = H.cell $ H.td << f a
 
-newForm :: View H.Html
-newForm = do
-  return $ H.form ! [H.action "/", H.method "post"] << inner
+newForm :: H.Html
+newForm = H.form ! [H.action "/", H.method "post"] << inner
   where
     inner = H.input ! [H.thetype "hidden", H.name "action", H.value "new"]
         +++ H.defList
