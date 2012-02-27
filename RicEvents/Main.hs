@@ -15,6 +15,7 @@ import qualified Data.Vector as V
 import qualified Data.Conduit as C
 import qualified Data.Conduit.List as CL
 import qualified Control.Monad.Reader as R
+import qualified Text.Parsec as P
 import Data.Maybe
 import Data.String
 import Control.Monad.Trans
@@ -53,8 +54,9 @@ hPOST :: Handler (C.ResourceT IO W.Response)
 hPOST = do
   action <- query "action"
   case action of
-    Just "new" -> newResponse
-    _          -> invalidQuery
+    Just "new"    -> newResponse
+    Just "delete" -> deleteResponse
+    _             -> invalidQuery
   where
     newResponse = do
       form <- AttendeeForm <$> query "name" <*> query "circle" <*> query "comment"
@@ -63,6 +65,19 @@ hPOST = do
           liftIO $ D.withDB "./hoge.json" $ D.putAttendee attendee
           return $ redirectResponse "/"
         Nothing -> invalidQuery
+
+    deleteResponse = do
+      name <- query "name"
+      case deleteAttendee <$> name of
+        Just response -> response
+        Nothing       -> invalidQuery
+
+    deleteAttendee id = do
+      case P.runP (P.many1 P.digit) "" "" id of
+        Right id' -> return $ do
+          liftIO $ D.withDB "./hoge.json" $ D.deleteAttendee $ read id'
+          return $ redirectResponse "/"
+        Left _    -> invalidQuery
 
     invalidQuery = return $ return errorResponse
 
