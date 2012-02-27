@@ -90,6 +90,7 @@ deleteForm = postForm "Delete" inner
   where
     inner = H.input ! [H.thetype "hidden", H.name "action", H.value "delete"]
         +++ input "text" "attendee-id" "id"
+        +++ input "password" "attendee-password" "password"
         +++ submit "send"
 
     input type_ label dest = H.label ! [H.thefor label] << label
