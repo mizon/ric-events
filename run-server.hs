@@ -18,9 +18,9 @@ main = do
       return $ getPort opts
 
 getPort :: [ServerOption] -> Int
-getPort []               = undefined
 getPort (PortNumber n:_) = n
 getPort (_:os)           = getPort os
+getPort _                = undefined
 
 data ServerOption
   = PortNumber Int
