@@ -68,12 +68,10 @@ hPOST = do
 
     deleteResponse = do
       name <- query "name"
-      case deleteAttendee <$> name of
-        Just response -> response
-        Nothing       -> invalidQuery
+      fromMaybe invalidQuery $ deleteAttendee <$> name
 
-    deleteAttendee id = do
-      case P.runP (P.many1 P.digit) "" "" id of
+    deleteAttendee id_ = do
+      case P.runP (P.many1 P.digit) [] [] id_ of
         Right id' -> return $ do
           liftIO $ D.withDB "./hoge.json" $ D.deleteAttendee $ read id'
           return $ redirectResponse "/"
