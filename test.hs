@@ -41,7 +41,7 @@ checkDB = TestList
         D.putAttendee attendee
         D.putAttendee attendee
       D.withDB dbPath $ do
-        D.deleteAttendee 0
+        D.deleteAttendee "pass" 0
       (a1, a2) <- D.withDB dbPath $ do
         a <- D.getAttendee 0
         b <- D.getAttendee 1
@@ -56,7 +56,7 @@ checkDB = TestList
         D.putAttendee attendee
         D.putAttendee attendee
       all_ <- D.withDB dbPath $ do
-        D.deleteAttendee 0
+        D.deleteAttendee "pass" 0
         D.getAllAttendees
       V.length all_ @?= 2
   ]

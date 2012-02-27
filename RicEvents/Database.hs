@@ -12,7 +12,6 @@ import qualified Data.Aeson.Types as AT
 import qualified Data.Attoparsec as At
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import Data.ByteString.Lazy.Char8 ()
 import qualified Data.Vector as V
 import qualified Data.Maybe as Mb
 import qualified Data.Digest.Pure.SHA as SHA
@@ -29,13 +28,13 @@ data Attendee = Attendee
   , aName :: String
   , aCircle :: String
   , aComment :: String
-  , aEncryptedPassword :: LBS.ByteString
+  , aEncryptedPassword :: String
   }
   deriving Show
 
 mkAttendee :: String -> String -> String -> LBS.ByteString -> Attendee
 mkAttendee name circle comment password
-  = Attendee Nothing name circle comment password
+  = Attendee Nothing name circle comment $ encrypt password
 
 instance A.ToJSON Attendee where
   toJSON (Attendee id_ name circle comment password) = A.object
@@ -74,8 +73,8 @@ getAttendee = S.gets . get
 putAttendee :: Attendee -> DBAction ()
 putAttendee = S.modify . put
 
-deleteAttendee :: Int -> DBAction ()
-deleteAttendee = S.modify . delete
+deleteAttendee :: LBS.ByteString -> Int -> DBAction ()
+deleteAttendee pass = S.modify . delete pass
 
 getAllAttendees :: DBAction (V.Vector Attendee)
 getAllAttendees = S.gets all
@@ -87,10 +86,12 @@ put :: Attendee -> AttendeeDB -> AttendeeDB
 put a db@AttendeeDB {dbAttendees = as}
   = db {dbAttendees = as `V.snoc` Just a {aId = Just $ V.length as}}
 
-delete :: Int -> AttendeeDB -> AttendeeDB
-delete i db@AttendeeDB {dbAttendees = as} = deleteIfExist $ get i db
+delete :: LBS.ByteString -> Int -> AttendeeDB -> AttendeeDB
+delete pass i db@AttendeeDB {dbAttendees = as} = deleteIfExist $ get i db
   where
-    deleteIfExist (Just _) = db {dbAttendees = as V.// [(i, Nothing)]}
+    deleteIfExist (Just Attendee {aEncryptedPassword = ep})
+      | ep == encrypt pass = db {dbAttendees = as V.// [(i, Nothing)]}
+      | otherwise          = db
     deleteIfExist Nothing  = db
 
 all :: AttendeeDB -> V.Vector Attendee
@@ -111,3 +112,6 @@ loadDB path = do
 
 saveDB :: AttendeeDB -> IO ()
 saveDB db = LBS.writeFile (dbPath db) $ A.encode $ dbAttendees db
+
+encrypt :: LBS.ByteString -> String
+encrypt = SHA.showDigest . SHA.sha1

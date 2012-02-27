@@ -11,6 +11,7 @@ import qualified Network.Wai as W
 import qualified Network.HTTP.Types as HT
 import qualified Text.XHtml as H
 import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Data.Vector as V
 import qualified Data.Conduit as C
@@ -72,10 +73,11 @@ hPOST = do
 
     deleteResponse = do
       id_ <- queryDigit "id"
-      fromMaybe invalidQuery $ deleteAttendee <$> id_
+      p <- query "password"
+      fromMaybe invalidQuery $ deleteAttendee <$> (BLC.pack <$> p) <*> id_
 
-    deleteAttendee id_ = return $ do
-      liftIO $ D.withDB "./hoge.json" $ D.deleteAttendee id_
+    deleteAttendee passwd id_ = return $ do
+      liftIO $ D.withDB "./hoge.json" $ D.deleteAttendee passwd id_
       return $ redirectResponse "/"
 
     invalidQuery = return $ return errorResponse
