@@ -67,15 +67,12 @@ hPOST = do
         Nothing -> invalidQuery
 
     deleteResponse = do
-      name <- query "name"
-      fromMaybe invalidQuery $ deleteAttendee <$> name
+      id_ <- queryDigit "id"
+      fromMaybe invalidQuery $ deleteAttendee <$> id_
 
-    deleteAttendee id_ = do
-      case P.runP (P.many1 P.digit) [] [] id_ of
-        Right id' -> return $ do
-          liftIO $ D.withDB "./hoge.json" $ D.deleteAttendee $ read id'
-          return $ redirectResponse "/"
-        Left _    -> invalidQuery
+    deleteAttendee id_ = return $ do
+      liftIO $ D.withDB "./hoge.json" $ D.deleteAttendee id_
+      return $ redirectResponse "/"
 
     invalidQuery = return $ return errorResponse
 
@@ -83,6 +80,15 @@ query :: String -> Handler (Maybe String)
 query key = do
   v <- R.asks $ lookup $ fromString key
   return $ BC.unpack <$> join v
+
+queryDigit :: String -> Handler (Maybe Int)
+queryDigit key = do
+  v <- query key
+  return $ toInt =<< v
+  where
+    toInt str = case P.runP (P.many1 P.digit) [] [] key of
+      Right v -> Just $ read v
+      _       -> Nothing
 
 htmlResponse :: H.Html -> W.Response
 htmlResponse = W.responseLBS HT.status200
