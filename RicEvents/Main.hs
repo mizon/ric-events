@@ -43,9 +43,9 @@ hGET = do
   q <- R.ask
   return $ htmlResponse <$> do
     message <- liftIO $ readFile "./message.txt"
-    as <- liftIO $ V.toList <$> D.withDB "./hoge.json" D.getAllAttendees
+    Right as <- liftIO $ D.withDB "./hoge.json" D.getAllAttendees
     return $ Vi.render Vi.mainView Vi.RenderContext
-      { Vi.rcAttendees = as
+      { Vi.rcAttendees = V.toList as
       , Vi.rcViewTitle = "hogefuga"
       , Vi.rcHeaderMessage = message
       , Vi.rcQuery = q
@@ -66,7 +66,7 @@ hPOST = do
                            <*> query "password"
       case validate form of
         Just attendee -> return $ do
-          liftIO $ D.withDB "./hoge.json" $ D.putAttendee attendee
+          _ <- liftIO $ D.withDB "./hoge.json" $ D.putAttendee attendee
           return $ redirectResponse "/"
         Nothing -> invalidQuery
 
@@ -76,8 +76,10 @@ hPOST = do
       fromMaybe invalidQuery $ deleteAttendee <$> (BLC.pack <$> p) <*> id_
 
     deleteAttendee passwd id_ = return $ do
-      liftIO $ D.withDB "./hoge.json" $ D.deleteAttendee passwd id_
-      return $ redirectResponse "/"
+      status <- liftIO $ D.withDB "./hoge.json" $ D.deleteAttendee passwd id_
+      return $ case status of
+        Right _ -> redirectResponse "/"
+        Left _  -> errorResponse
 
     invalidQuery = return $ return errorResponse
 

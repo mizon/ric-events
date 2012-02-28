@@ -19,6 +19,7 @@ import System.IO
 import Control.Applicative
 import Control.Monad
 import qualified Control.Monad.State as S
+import qualified Control.Monad.Error as E
 import qualified System.FilePath as F
 
 import Prelude hiding (all)
@@ -59,13 +60,16 @@ data AttendeeDB = AttendeeDB
   }
   deriving Show
 
-type DBAction = S.State AttendeeDB
+type DBAction = S.StateT AttendeeDB (Either String)
 
-withDB :: F.FilePath -> DBAction a -> IO a
+withDB :: F.FilePath -> DBAction a -> IO (Either String a)
 withDB path action = do
-  (a, db) <- S.runState action `fmap` loadDB path
-  saveDB db
-  return a
+  e <- S.runStateT action <$> loadDB path
+  case e of
+    Right (a, db) -> do
+      saveDB db
+      return $ Right a
+    Left err -> return $ Left err
 
 getAttendee :: Int -> DBAction (Maybe Attendee)
 getAttendee = S.gets . get
@@ -74,7 +78,11 @@ putAttendee :: Attendee -> DBAction ()
 putAttendee = S.modify . put
 
 deleteAttendee :: LBS.ByteString -> Int -> DBAction ()
-deleteAttendee pass = S.modify . delete pass
+deleteAttendee pass id_ = do
+  status <- delete pass id_ <$> S.get
+  case status of
+    Right db -> S.put db
+    Left err -> E.throwError err
 
 getAllAttendees :: DBAction (V.Vector Attendee)
 getAllAttendees = S.gets all
@@ -86,20 +94,20 @@ put :: Attendee -> AttendeeDB -> AttendeeDB
 put a db@AttendeeDB {dbAttendees = as}
   = db {dbAttendees = as `V.snoc` Just a {aId = Just $ V.length as}}
 
-delete :: LBS.ByteString -> Int -> AttendeeDB -> AttendeeDB
+delete :: LBS.ByteString -> Int -> AttendeeDB -> Either String AttendeeDB
 delete pass i db@AttendeeDB {dbAttendees = as} = deleteIfExist $ get i db
   where
     deleteIfExist (Just Attendee {aEncryptedPassword = ep})
-      | ep == encrypt pass = db {dbAttendees = as V.// [(i, Nothing)]}
-      | otherwise          = db
-    deleteIfExist Nothing  = db
+      | ep == encrypt pass = Right db {dbAttendees = as V.// [(i, Nothing)]}
+      | otherwise          = Left "invalid password"
+    deleteIfExist Nothing  = Left "invalid id"
 
 all :: AttendeeDB -> V.Vector Attendee
 all = V.map Mb.fromJust . V.filter Mb.isJust . dbAttendees
 
 loadDB :: F.FilePath -> IO AttendeeDB
 loadDB path = do
-  m <- attendees `fmap` BS.readFile path
+  m <- attendees <$> BS.readFile path
   return AttendeeDB {dbAttendees = m, dbPath = path}
   where
     attendees bs = case attendees' bs of

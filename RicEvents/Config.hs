@@ -10,4 +10,6 @@ parseConfig = undefined
 data Config = Config
   { cHeaderMessage :: String
   , cPasswordSalt :: String
+  , cDatabasePath :: F.FilePath
   }
+  deriving (Show, Eq)
