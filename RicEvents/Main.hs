@@ -6,6 +6,7 @@ module RicEvents.Main
 
 import qualified RicEvents.Database as D
 import qualified RicEvents.View as Vi
+import qualified RicEvents.Config as Cf
 
 import qualified Network.Wai as W
 import qualified Network.HTTP.Types as HT
@@ -23,8 +24,8 @@ import Control.Monad.Trans
 import Control.Monad
 import Control.Applicative
 
-waiApp :: W.Application
-waiApp W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q}
+waiApp :: Cf.Config -> W.Application
+waiApp conf W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q}
   | m == "GET"  = handle hGET q
   | m == "POST" = handle hPOST =<< queryStream
   | otherwise   = return errorResponse
