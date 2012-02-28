@@ -1,0 +1,3 @@
+header-comment: message
+password-salt: salt
+database-path: db-path
