@@ -40,7 +40,7 @@ handle = R.runReader
 
 hGET :: Handler (C.ResourceT IO W.Response)
 hGET = do
-  h <- renderTop
+  h <- renderTop []
   return $ htmlResponse <$> liftIO h
 
 hPOST :: Handler (C.ResourceT IO W.Response)
@@ -75,8 +75,8 @@ hPOST = do
 
     invalidQuery = return $ return errorResponse
 
-renderTop :: Handler (IO H.Html)
-renderTop = do
+renderTop :: [String] -> Handler (IO H.Html)
+renderTop errs = do
   q <- R.ask
   return $ do
     message <- readFile "./message.txt"

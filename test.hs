@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings, StandaloneDeriving #-}
 
 import qualified RicEvents.Database as D
+import qualified RicEvents.Config as C
+
 import qualified System.Directory as Di
 import qualified Data.ByteString as BS
 import Data.ByteString.Lazy.Char8 ()
@@ -13,9 +15,12 @@ deriving instance Eq D.Attendee
 
 main :: IO ()
 main = do
-  Counts {errors = e, failures = f} <- runTestTT checkDB
+  Counts {errors = e, failures = f} <- runTestTT checkAll
   when (e + f > 0)
     exitFailure
+
+checkAll :: Test
+checkAll = TestList [checkDB, checkConfig]
 
 checkDB :: Test
 checkDB = TestList
@@ -62,8 +67,8 @@ checkDB = TestList
       V.length all_ @?= 2
   ]
   where
-    withDBSuppress path action = do
-      _ <- D.withDB path action
+    withDBSuppress path_ action = do
+      _ <- D.withDB path_ action
       return ()
 
     dbPath = "./hoge.json"
@@ -75,3 +80,16 @@ checkDB = TestList
     cleanUp = do
       Di.removeFile dbPath
       BS.writeFile dbPath "[]"
+
+checkConfig :: Test
+checkConfig = TestList
+  [ "parse file" ~: do
+      Just conf <- C.parseConfig "config-test.yaml"
+      conf @?= expect
+  ]
+  where
+    expect = C.Config
+      { C.cHeaderComment = "message"
+      , C.cPasswordSalt = "salt"
+      , C.cDatabasePath = "db-path"
+      }
