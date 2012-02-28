@@ -40,16 +40,8 @@ handle = R.runReader
 
 hGET :: Handler (C.ResourceT IO W.Response)
 hGET = do
-  q <- R.ask
-  return $ htmlResponse <$> do
-    message <- liftIO $ readFile "./message.txt"
-    Right as <- liftIO $ D.withDB "./hoge.json" D.getAllAttendees
-    return $ Vi.render Vi.mainView Vi.RenderContext
-      { Vi.rcAttendees = V.toList as
-      , Vi.rcViewTitle = "hogefuga"
-      , Vi.rcHeaderMessage = message
-      , Vi.rcQuery = q
-      }
+  h <- renderTop
+  return $ htmlResponse <$> liftIO h
 
 hPOST :: Handler (C.ResourceT IO W.Response)
 hPOST = do
@@ -82,6 +74,19 @@ hPOST = do
         Left _  -> errorResponse
 
     invalidQuery = return $ return errorResponse
+
+renderTop :: Handler (IO H.Html)
+renderTop = do
+  q <- R.ask
+  return $ do
+    message <- readFile "./message.txt"
+    Right as <- D.withDB "./hoge.json" D.getAllAttendees
+    return $ Vi.render Vi.mainView Vi.RenderContext
+      { Vi.rcAttendees = V.toList as
+      , Vi.rcViewTitle = "hogefuga"
+      , Vi.rcHeaderMessage = message
+      , Vi.rcQuery = q
+      }
 
 query :: String -> Handler (Maybe String)
 query key = do
