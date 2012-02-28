@@ -78,7 +78,7 @@ hPOST = do
 
 renderTop :: [String] -> HandlerM (IO H.Html)
 renderTop errs = do
-  q <- R.ask
+  q <- httpQuery
   return $ do
     message <- readFile "./message.txt"
     Right as <- D.withDB "./hoge.json" D.getAllAttendees
@@ -91,8 +91,8 @@ renderTop errs = do
 
 query :: String -> HandlerM (Maybe String)
 query key = do
-  v <- R.asks $ lookup $ fromString key
-  return $ BC.unpack <$> join v
+  q <- httpQuery
+  return $ BC.unpack <$> (join $ lookup (fromString key) q)
 
 queryDigit :: String -> HandlerM (Maybe Int)
 queryDigit key = (toInt =<<) <$> query key
@@ -100,6 +100,9 @@ queryDigit key = (toInt =<<) <$> query key
     toInt str = case P.runP (P.many1 P.digit) [] [] str of
       Right v -> Just $ read v
       _       -> Nothing
+
+httpQuery :: HandlerM HT.Query
+httpQuery = R.ask
 
 htmlResponse :: H.Html -> W.Response
 htmlResponse = W.responseLBS HT.status200
