@@ -34,17 +34,17 @@ waiApp conf W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q
       body <- b C.$$ CL.head
       return $ HT.parseQuery $ fromMaybe "" body
 
-type Handler = R.Reader HT.Query
+type HandlerM = R.Reader HT.Query
 
-handle :: Handler (C.ResourceT IO W.Response) -> HT.Query -> C.ResourceT IO W.Response
+handle :: HandlerM (C.ResourceT IO W.Response) -> HT.Query -> C.ResourceT IO W.Response
 handle = R.runReader
 
-hGET :: Handler (C.ResourceT IO W.Response)
+hGET :: HandlerM (C.ResourceT IO W.Response)
 hGET = do
   h <- renderTop []
   return $ htmlResponse <$> liftIO h
 
-hPOST :: Handler (C.ResourceT IO W.Response)
+hPOST :: HandlerM (C.ResourceT IO W.Response)
 hPOST = do
   action <- query "action"
   case action of
@@ -76,7 +76,7 @@ hPOST = do
 
     invalidQuery = return $ return errorResponse
 
-renderTop :: [String] -> Handler (IO H.Html)
+renderTop :: [String] -> HandlerM (IO H.Html)
 renderTop errs = do
   q <- R.ask
   return $ do
@@ -89,12 +89,12 @@ renderTop errs = do
       , Vi.rcQuery = q
       }
 
-query :: String -> Handler (Maybe String)
+query :: String -> HandlerM (Maybe String)
 query key = do
   v <- R.asks $ lookup $ fromString key
   return $ BC.unpack <$> join v
 
-queryDigit :: String -> Handler (Maybe Int)
+queryDigit :: String -> HandlerM (Maybe Int)
 queryDigit key = (toInt =<<) <$> query key
   where
     toInt str = case P.runP (P.many1 P.digit) [] [] str of
