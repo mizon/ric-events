@@ -47,7 +47,7 @@ data Handler = Handler
 
 type HandlerM = R.Reader Handler
 
-handle :: HandlerM (C.ResourceT IO W.Response) -> Handler -> C.ResourceT IO W.Response
+handle :: HandlerM a -> Handler -> a
 handle = R.runReader
 
 hGET :: HandlerM (C.ResourceT IO W.Response)
