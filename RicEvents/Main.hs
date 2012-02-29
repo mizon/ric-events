@@ -73,7 +73,7 @@ hPOST = do
         Right attendee -> do
           _ <- liftIO $ D.withDB d $ D.putAttendee attendee
           return $ redirectResponse "/"
-        Left _ -> invalidQuery
+        Left errs -> htmlResponse <$> renderTop errs
 
     deleteResponse = do
       id_ <- queryDigit "id"
@@ -85,7 +85,7 @@ hPOST = do
       status <- liftIO $ D.withDB d $ D.deleteAttendee passwd id_
       case status of
         Right _ -> return $ redirectResponse "/"
-        Left _  -> htmlResponse <$> renderTop ["missing attendee"]
+        Left _  -> htmlResponse <$> renderTop ["invalid id or password"]
 
     invalidQuery = return errorResponse
 
@@ -140,14 +140,14 @@ data AttendeeForm = AttendeeForm
   }
 
 validate :: AttendeeForm -> Either [String] D.Attendee
-validate f@AttendeeForm
+validate AttendeeForm
   { aName = Right name
   , aCircle = Right circle
   , aComment = comment
   , aPassword = Right password
   }
   = Right $ D.mkAttendee name circle comment $ BLC.pack password
-validate f@AttendeeForm
+validate AttendeeForm
   { aName = name
   , aCircle = circle
   , aPassword = password
