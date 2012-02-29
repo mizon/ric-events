@@ -43,17 +43,17 @@ data Handler = Handler
   , hConfig :: Cf.Config
   }
 
-type HandlerM = R.Reader Handler
+type HandlerM = R.ReaderT Handler (C.ResourceT IO)
 
-handle :: HandlerM a -> Handler -> a
-handle = R.runReader
+handle :: HandlerM a -> Handler -> C.ResourceT IO a
+handle = R.runReaderT
 
-hGET :: HandlerM (C.ResourceT IO W.Response)
+hGET :: HandlerM W.Response
 hGET = do
   h <- renderTop []
-  return $ htmlResponse <$> liftIO h
+  return $ htmlResponse h
 
-hPOST :: HandlerM (C.ResourceT IO W.Response)
+hPOST :: HandlerM W.Response
 hPOST = do
   action <- query "action"
   case action of
@@ -68,7 +68,7 @@ hPOST = do
                            <*> query "password"
       d <- refConf Cf.cDatabasePath
       case validate form of
-        Just attendee -> return $ do
+        Just attendee -> do
           _ <- liftIO $ D.withDB d $ D.putAttendee attendee
           return $ redirectResponse "/"
         Nothing -> invalidQuery
@@ -81,28 +81,26 @@ hPOST = do
     deleteAttendee passwd id_ = do
       d <- refConf Cf.cDatabasePath
       h <- R.ask
-      return $ do
-        status <- liftIO $ D.withDB d $ D.deleteAttendee passwd id_
-        case status of
-          Right _ -> return $ redirectResponse "/"
-          Left _  -> liftIO $ htmlResponse <$> handle (renderTop ["missing attendee"]) h
+      status <- liftIO $ D.withDB d $ D.deleteAttendee passwd id_
+      case status of
+        Right _ -> return $ redirectResponse "/"
+        Left _  -> htmlResponse <$> renderTop ["missing attendee"]
 
-    invalidQuery = return $ return errorResponse
+    invalidQuery = return errorResponse
 
-renderTop :: [String] -> HandlerM (IO H.Html)
+renderTop :: [String] -> HandlerM H.Html
 renderTop errs = do
   q <- httpQuery
   d <- refConf Cf.cDatabasePath
   h <- refConf Cf.cHeaderComment
-  return $ do
-    Right as <- D.withDB d D.getAllAttendees
-    return $ Vi.render Vi.mainView Vi.RenderContext
-      { Vi.rcAttendees = V.toList as
-      , Vi.rcViewTitle = "hogefuga"
-      , Vi.rcHeaderMessage = h
-      , Vi.rcQuery = q
-      , Vi.rcErrors = errs
-      }
+  Right as <- liftIO $ D.withDB d D.getAllAttendees
+  return $ Vi.render Vi.mainView Vi.RenderContext
+    { Vi.rcAttendees = V.toList as
+    , Vi.rcViewTitle = "hogefuga"
+    , Vi.rcHeaderMessage = h
+    , Vi.rcQuery = q
+    , Vi.rcErrors = errs
+    }
 
 query :: String -> HandlerM (Maybe String)
 query key = do
