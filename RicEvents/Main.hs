@@ -100,6 +100,7 @@ renderTop errs = do
       , Vi.rcViewTitle = "hogefuga"
       , Vi.rcHeaderMessage = h
       , Vi.rcQuery = q
+      , Vi.rcErrors = errs
       }
 
 query :: String -> HandlerM (Maybe String)

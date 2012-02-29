@@ -27,8 +27,9 @@ mainView = H.concatHtml <$> sequence [header, body]
     body = do
       t <- (H.h1 <<) <$> title
       h <- (H.paragraph <<) <$> R.asks rcHeaderMessage
+      errs <- H.unordList <$> R.asks rcErrors
       as <- attendees
-      return $ H.concatHtml [t, h, as, newForm, deleteForm]
+      return $ H.concatHtml [t, h, errs, as, newForm, deleteForm]
 
     title = R.asks rcViewTitle
 
@@ -37,6 +38,7 @@ data RenderContext = RenderContext
   , rcViewTitle :: String
   , rcHeaderMessage :: String
   , rcQuery :: HT.Query
+  , rcErrors :: [String]
   }
 
 type View = R.Reader RenderContext
