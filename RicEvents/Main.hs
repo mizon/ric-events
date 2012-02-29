@@ -30,15 +30,13 @@ waiApp conf W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q
     { hQuery = q
     , hConfig = conf
     }
-  | m == "POST" = handle hPOST =<< postHandler
+  | m == "POST" = handle hPOST =<< do
+    body <- b C.$$ CL.head
+    return $ Handler
+      { hQuery = HT.parseQuery $ fromMaybe "" body
+      , hConfig = conf
+      }
   | otherwise   = return errorResponse
-  where
-    postHandler = do
-      body <- b C.$$ CL.head
-      return $ Handler
-        { hQuery = HT.parseQuery $ fromMaybe "" body
-        , hConfig = conf
-        }
 
 data Handler = Handler
   { hQuery :: HT.Query
