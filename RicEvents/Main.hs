@@ -80,7 +80,6 @@ hPOST = do
 
     deleteAttendee passwd id_ = do
       d <- refConf Cf.cDatabasePath
-      h <- R.ask
       status <- liftIO $ D.withDB d $ D.deleteAttendee passwd id_
       case status of
         Right _ -> return $ redirectResponse "/"
