@@ -80,11 +80,12 @@ hPOST = do
 
     deleteAttendee passwd id_ = do
       d <- refConf Cf.cDatabasePath
+      h <- R.ask
       return $ do
         status <- liftIO $ D.withDB d $ D.deleteAttendee passwd id_
-        return $ case status of
-          Right _ -> redirectResponse "/"
-          Left _  -> errorResponse
+        case status of
+          Right _ -> return $ redirectResponse "/"
+          Left _  -> liftIO $ htmlResponse <$> handle (renderTop ["missing attendee"]) h
 
     invalidQuery = return $ return errorResponse
 
