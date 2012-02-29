@@ -68,9 +68,10 @@ hPOST = do
                            <*> query "circle"
                            <*> query "comment"
                            <*> query "password"
+      d <- refConf Cf.cDatabasePath
       case validate form of
         Just attendee -> return $ do
-          _ <- liftIO $ D.withDB "./hoge.json" $ D.putAttendee attendee
+          _ <- liftIO $ D.withDB d $ D.putAttendee attendee
           return $ redirectResponse "/"
         Nothing -> invalidQuery
 
@@ -79,24 +80,27 @@ hPOST = do
       p <- query "password"
       fromMaybe invalidQuery $ deleteAttendee <$> (BLC.pack <$> p) <*> id_
 
-    deleteAttendee passwd id_ = return $ do
-      status <- liftIO $ D.withDB "./hoge.json" $ D.deleteAttendee passwd id_
-      return $ case status of
-        Right _ -> redirectResponse "/"
-        Left _  -> errorResponse
+    deleteAttendee passwd id_ = do
+      d <- refConf Cf.cDatabasePath
+      return $ do
+        status <- liftIO $ D.withDB d $ D.deleteAttendee passwd id_
+        return $ case status of
+          Right _ -> redirectResponse "/"
+          Left _  -> errorResponse
 
     invalidQuery = return $ return errorResponse
 
 renderTop :: [String] -> HandlerM (IO H.Html)
 renderTop errs = do
   q <- httpQuery
+  d <- refConf Cf.cDatabasePath
+  h <- refConf Cf.cHeaderComment
   return $ do
-    message <- readFile "./message.txt"
-    Right as <- D.withDB "./hoge.json" D.getAllAttendees
+    Right as <- D.withDB d D.getAllAttendees
     return $ Vi.render Vi.mainView Vi.RenderContext
       { Vi.rcAttendees = V.toList as
       , Vi.rcViewTitle = "hogefuga"
-      , Vi.rcHeaderMessage = message
+      , Vi.rcHeaderMessage = h
       , Vi.rcQuery = q
       }
 
@@ -114,6 +118,9 @@ queryDigit key = (toInt =<<) <$> query key
 
 httpQuery :: HandlerM HT.Query
 httpQuery = R.asks hQuery
+
+refConf :: (Cf.Config -> a) -> HandlerM a
+refConf f = R.asks $ f . hConfig
 
 htmlResponse :: H.Html -> W.Response
 htmlResponse = W.responseLBS HT.status200
