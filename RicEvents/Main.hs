@@ -26,17 +26,28 @@ import Control.Applicative
 
 waiApp :: Cf.Config -> W.Application
 waiApp conf W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q}
-  | m == "GET"  = handle hGET q
-  | m == "POST" = handle hPOST =<< queryStream
+  | m == "GET"  = handle hGET Handler
+    { hQuery = q
+    , hConfig = conf
+    }
+  | m == "POST" = handle hPOST =<< postHandler
   | otherwise   = return errorResponse
   where
-    queryStream = do
+    postHandler = do
       body <- b C.$$ CL.head
-      return $ HT.parseQuery $ fromMaybe "" body
+      return $ Handler
+        { hQuery = HT.parseQuery $ fromMaybe "" body
+        , hConfig = conf
+        }
 
-type HandlerM = R.Reader HT.Query
+data Handler = Handler
+  { hQuery :: HT.Query
+  , hConfig :: Cf.Config
+  }
 
-handle :: HandlerM (C.ResourceT IO W.Response) -> HT.Query -> C.ResourceT IO W.Response
+type HandlerM = R.Reader Handler
+
+handle :: HandlerM (C.ResourceT IO W.Response) -> Handler -> C.ResourceT IO W.Response
 handle = R.runReader
 
 hGET :: HandlerM (C.ResourceT IO W.Response)
@@ -102,7 +113,7 @@ queryDigit key = (toInt =<<) <$> query key
       _       -> Nothing
 
 httpQuery :: HandlerM HT.Query
-httpQuery = R.ask
+httpQuery = R.asks hQuery
 
 htmlResponse :: H.Html -> W.Response
 htmlResponse = W.responseLBS HT.status200
