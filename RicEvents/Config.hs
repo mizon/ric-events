@@ -5,8 +5,7 @@ module RicEvents.Config
   ) where
 
 import qualified Data.Yaml as Y
-import Data.Yaml ((.=), (.:))
-import qualified Data.Text as T
+import Data.Yaml ((.:))
 import qualified System.FilePath as F
 import Control.Applicative
 

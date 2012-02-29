@@ -3,6 +3,7 @@ module RicEvents.View
   ) where
 
 import qualified RicEvents.Database as D
+import qualified RicEvents.Locale as L
 
 import qualified Network.HTTP.Types as HT
 import qualified Text.XHtml as H
@@ -27,9 +28,14 @@ mainView = H.concatHtml <$> sequence [header, body]
     body = do
       t <- (H.h1 <<) <$> title
       h <- (H.paragraph <<) <$> R.asks rcHeaderMessage
-      errs <- H.unordList <$> R.asks rcErrors
+      errs <- errors
       as <- attendees
       return $ H.concatHtml [t, h, errs, as, newForm, deleteForm]
+
+    errors = do
+      l <- R.asks rcLocale
+      msgs <- R.asks rcErrors
+      return $ H.unordList $ map (\e -> e l) msgs
 
     title = R.asks rcViewTitle
 
@@ -38,7 +44,8 @@ data RenderContext = RenderContext
   , rcViewTitle :: String
   , rcHeaderMessage :: String
   , rcQuery :: HT.Query
-  , rcErrors :: [String]
+  , rcErrors :: [L.ErrorMessage]
+  , rcLocale :: L.Locale
   }
 
 type View = R.Reader RenderContext

@@ -7,6 +7,7 @@ module RicEvents.Main
 import qualified RicEvents.Database as D
 import qualified RicEvents.View as Vi
 import qualified RicEvents.Config as Cf
+import qualified RicEvents.Locale as L
 
 import qualified Network.Wai as W
 import qualified Network.HTTP.Types as HT
@@ -27,11 +28,11 @@ import Control.Applicative
 
 waiApp :: Cf.Config -> W.Application
 waiApp conf W.Request {W.requestMethod = m, W.requestBody = b, W.queryString = q}
-  | m == "GET"  = handle hGET Handler
+  | m == "GET"  = handle renderTop Handler
     { hQuery = q
     , hConfig = conf
     }
-  | m == "POST" = handle hPOST =<< do
+  | m == "POST" = handle postHandler =<< do
     body <- b C.$$ CL.head
     return $ Handler
       { hQuery = HT.parseQuery $ fromMaybe "" body
@@ -49,18 +50,13 @@ type HandlerM = R.ReaderT Handler (C.ResourceT IO)
 handle :: HandlerM a -> Handler -> C.ResourceT IO a
 handle = R.runReaderT
 
-hGET :: HandlerM W.Response
-hGET = do
-  h <- renderTop []
-  return $ htmlResponse h
-
-hPOST :: HandlerM W.Response
-hPOST = do
+postHandler :: HandlerM W.Response
+postHandler = do
   action <- query "action"
   case action of
     Just "new"    -> newResponse
     Just "delete" -> deleteResponse
-    _             -> invalidQuery
+    _             -> renderWithError [L.invalidRequest]
   where
     newResponse = do
       form <- inputForm
@@ -73,24 +69,28 @@ hPOST = do
         Right attendee -> do
           _ <- liftIO $ D.withDB d $ D.putAttendee attendee
           return $ redirectResponse "/"
-        Left errs -> htmlResponse <$> renderTop errs
+        Left errs -> renderWithError errs
 
     deleteResponse = do
       id_ <- queryDigit "id"
       p <- query "password"
-      fromMaybe invalidQuery $ deleteAttendee <$> (BLC.pack <$> p) <*> id_
+      fromMaybe (renderWithError [L.noInput]) $ deleteAttendee <$> (BLC.pack <$> p) <*> id_
 
     deleteAttendee passwd id_ = do
       d <- refConf Cf.cDatabasePath
       status <- liftIO $ D.withDB d $ D.deleteAttendee passwd id_
       case status of
         Right _ -> return $ redirectResponse "/"
-        Left _  -> htmlResponse <$> renderTop ["invalid id or password"]
+        Left _  -> renderWithError [L.invalidIdOrPassword]
 
-    invalidQuery = return errorResponse
+renderTop :: HandlerM W.Response
+renderTop = htmlResponse <$> renderTop' []
 
-renderTop :: [String] -> HandlerM H.Html
-renderTop errs = do
+renderWithError :: [L.ErrorMessage] -> HandlerM W.Response
+renderWithError errs = htmlResponse <$> renderTop' errs
+
+renderTop' :: [L.ErrorMessage] -> HandlerM H.Html
+renderTop' errs = do
   q <- httpQuery
   d <- refConf Cf.cDatabasePath
   h <- refConf Cf.cHeaderComment
@@ -101,6 +101,7 @@ renderTop errs = do
     , Vi.rcHeaderMessage = h
     , Vi.rcQuery = q
     , Vi.rcErrors = errs
+    , Vi.rcLocale = L.localeJa
     }
 
 query :: String -> HandlerM (Maybe String)
@@ -133,13 +134,13 @@ errorResponse = W.responseLBS HT.status400
   [HT.headerContentType "text/plain"] "invalid request"
 
 data AttendeeForm = AttendeeForm
-  { aName :: Either String String
-  , aCircle :: Either String String
+  { aName :: Either L.ErrorMessage String
+  , aCircle :: Either L.ErrorMessage String
   , aComment :: String
-  , aPassword :: Either String String
+  , aPassword :: Either L.ErrorMessage String
   }
 
-validate :: AttendeeForm -> Either [String] D.Attendee
+validate :: AttendeeForm -> Either [L.ErrorMessage] D.Attendee
 validate AttendeeForm
   { aName = Right name
   , aCircle = Right circle
@@ -160,10 +161,10 @@ inputForm :: Maybe String
           -> Maybe String
           -> AttendeeForm
 inputForm name circle comment password
-  = AttendeeForm (require "missing name" name)
-                 (require "missing circle" circle)
+  = AttendeeForm (require L.missingName name)
+                 (require L.missingCircle circle)
                  (norequire comment)
-                 (require "missing password" password)
+                 (require L.missingPassword password)
   where
     require msg (Just v)
       | null v    = Left msg
