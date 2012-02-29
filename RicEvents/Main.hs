@@ -19,6 +19,7 @@ import qualified Data.Conduit.List as CL
 import qualified Control.Monad.Reader as R
 import qualified Text.Parsec as P
 import Data.Maybe
+import Data.Either
 import Data.String
 import Control.Monad.Trans
 import Control.Monad
@@ -62,16 +63,17 @@ hPOST = do
     _             -> invalidQuery
   where
     newResponse = do
-      form <- AttendeeForm <$> query "name"
-                           <*> query "circle"
-                           <*> query "comment"
-                           <*> query "password"
+      form <- inputForm
+        <$> query "name"
+        <*> query "circle"
+        <*> query "comment"
+        <*> query "password"
       d <- refConf Cf.cDatabasePath
       case validate form of
-        Just attendee -> do
+        Right attendee -> do
           _ <- liftIO $ D.withDB d $ D.putAttendee attendee
           return $ redirectResponse "/"
-        Nothing -> invalidQuery
+        Left _ -> invalidQuery
 
     deleteResponse = do
       id_ <- queryDigit "id"
@@ -131,21 +133,41 @@ errorResponse = W.responseLBS HT.status400
   [HT.headerContentType "text/plain"] "invalid request"
 
 data AttendeeForm = AttendeeForm
-  { aName :: Maybe String
-  , aCircle :: Maybe String
-  , aComment :: Maybe String
-  , aPassword :: Maybe String
+  { aName :: Either String String
+  , aCircle :: Either String String
+  , aComment :: String
+  , aPassword :: Either String String
   }
 
-validate :: AttendeeForm -> Maybe D.Attendee
-validate AttendeeForm
-  { aName = Just name
-  , aCircle = Just circle
+validate :: AttendeeForm -> Either [String] D.Attendee
+validate f@AttendeeForm
+  { aName = Right name
+  , aCircle = Right circle
   , aComment = comment
-  , aPassword = Just password
+  , aPassword = Right password
   }
-  | any null [name, circle, password]
-    = Nothing
-  | otherwise
-    = Just $ D.mkAttendee name circle (fromMaybe "" comment) $ BLC.pack password
-validate _ = Nothing
+  = Right $ D.mkAttendee name circle comment $ BLC.pack password
+validate f@AttendeeForm
+  { aName = name
+  , aCircle = circle
+  , aPassword = password
+  }
+  = Left $ lefts [name, circle, password]
+
+inputForm :: Maybe String
+          -> Maybe String
+          -> Maybe String
+          -> Maybe String
+          -> AttendeeForm
+inputForm name circle comment password
+  = AttendeeForm (require "missing name" name)
+                 (require "missing circle" circle)
+                 (norequire comment)
+                 (require "missing password" password)
+  where
+    require msg (Just v)
+      | null v    = Left msg
+      | otherwise = Right v
+    require msg _ = Left msg
+
+    norequire = fromMaybe ""
